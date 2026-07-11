@@ -96,18 +96,6 @@ export default function Sidebar({ current, onNavigate, mobileOpen, onMobileClose
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4">
-          <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-blue-50 border border-brand-100/60 p-4">
-            <p className="text-[12px] font-semibold text-gray-700 mb-1">Pro 업그레이드</p>
-            <p className="text-[11px] text-gray-400 leading-relaxed mb-3">
-              무제한 분석 및 고급 기능
-            </p>
-            <button className="w-full py-2 rounded-xl bg-brand-600 text-white text-[12px] font-medium hover:bg-brand-700 transition-colors">
-              살펴보기
-            </button>
-          </div>
-        </div>
       </aside>
     </>
   );
