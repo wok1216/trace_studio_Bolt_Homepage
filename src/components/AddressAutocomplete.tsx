@@ -64,10 +64,12 @@ export default function AddressAutocomplete({
 
       for (const doc of docs) {
         const roadAddr = (doc.road_address as { address_name?: string })?.address_name || '';
+        const roadBuilding = (doc.road_address as any)?.main_building_no;
+        const jibunMain = (doc.address as any)?.main_address_no;
         const jibunAddr = (doc.address as { address_name?: string })?.address_name || '';
         const id = `${roadAddr || jibunAddr}-${doc.address_type || ''}`;
 
-        if (roadAddr) {
+        if (roadAddr && roadBuilding) {
           results.push({
             id: `${id}-road`,
             label: roadAddr,
@@ -76,7 +78,7 @@ export default function AddressAutocomplete({
             type: 'road',
           });
         }
-        if (jibunAddr) {
+        if (jibunAddr && jibunMain) {
           results.push({
             id: `${id}-jibun`,
             label: jibunAddr,
