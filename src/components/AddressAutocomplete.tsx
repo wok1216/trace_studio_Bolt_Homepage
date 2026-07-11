@@ -168,27 +168,7 @@ export default function AddressAutocomplete({
   return (
     <div ref={containerRef} className="relative">
       {/* Selected address chip */}
-      {selectedAddress && !showDropdown ? (
-        <div className="flex items-center justify-between gap-2 px-4 py-3.5 rounded-xl border border-brand-200 bg-brand-50/50">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <MapPin className="w-5 h-5 text-brand-600 flex-shrink-0" />
-            <span className="text-[15px] text-gray-900 font-medium truncate">
-              {selectedAddress}
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              onClear();
-              setQuery('');
-              setSuggestions([]);
-            }}
-            className="flex-shrink-0 w-7 h-7 rounded-lg hover:bg-white flex items-center justify-center transition-colors"
-          >
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
-        </div>
-      ) : (
-        <>
+     
           {/* Search input */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-300" />
@@ -277,7 +257,6 @@ export default function AddressAutocomplete({
               </p>
             </div>
           )}
-        </>
       )}
     </div>
   );
