@@ -123,14 +123,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick }: HomeP
               <MapPin className="w-6 h-6 text-gray-300" />
             </div>
             <p className="text-[15px] font-medium text-gray-400 mb-1">아직 프로젝트가 없습니다</p>
-            <p className="text-[13px] text-gray-300 mb-5">대지 분석을 시작하여 첫 프로젝트를 만들어보세요</p>
-            <div
-              onClick={() => onNavigate('site-analysis')}
-              className="inline-flex items-center gap-1.5 text-[14px] font-medium text-brand-600 cursor-pointer hover:gap-2.5 transition-all"
-            >
-              대지 분석 시작하기
-              <ArrowRight className="w-4 h-4" />
-            </div>
+            
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
