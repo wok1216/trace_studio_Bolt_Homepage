@@ -26,7 +26,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { key: 'home', label: '홈', icon: Home },
   { key: 'site-analysis', label: '대지 분석', icon: MapPin },
-  { key: 'reference', label: '레퍼런스', icon: Images },
+  { key: 'reference', label: '레퍼런스 추천', icon: Images },
   { key: 'design', label: '시안 생성', icon: PenTool },
   { key: 'review', label: '설계 검토', icon: ClipboardCheck },
   { key: 'projects', label: '프로젝트', icon: FolderKanban },
