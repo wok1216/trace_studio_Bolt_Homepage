@@ -70,7 +70,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick }: HomeP
             <span className="text-[12px] font-medium text-brand-600">AI 건축 워크스페이스</span>
           </div>
           <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-[1.1] mb-5 animate-fade-in-up">
-            Arch Assistant
+            Trace Studio
           </h1>
           <p className="text-lg lg:text-xl text-gray-400 font-medium tracking-tight animate-fade-in-up">
             AI Architecture Workspace
