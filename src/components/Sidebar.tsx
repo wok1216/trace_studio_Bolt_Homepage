@@ -58,7 +58,7 @@ export default function Sidebar({ current, onNavigate, mobileOpen, onMobileClose
               <Building2 className="w-5 h-5 text-white" strokeWidth={2.2} />
             </div>
             <div>
-              <p className="text-[15px] font-bold text-gray-900 leading-tight">Arch Assistant</p>
+              <p className="text-[15px] font-bold text-gray-900 leading-tight">Trace Studio</p>
               <p className="text-[11px] text-gray-400 font-medium">AI Workspace</p>
             </div>
           </div>
