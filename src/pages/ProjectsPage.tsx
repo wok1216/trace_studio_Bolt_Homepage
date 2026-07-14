@@ -29,7 +29,7 @@ export default function ProjectsPage({ projects, onNavigate, onProjectClick }: P
             <FolderKanban className="w-7 h-7 text-gray-300" />
           </div>
           <p className="text-[16px] font-semibold text-gray-400 mb-1">프로젝트가 없습니다</p>
-          <p className="text-[14px] text-gray-300 mb-6">대지 분석을 시작하여 첫 프로젝트를 만들어보세요</p>
+          <p className="text-[14px] text-gray-300 mb-6">첫 프로젝트를 만들어보세요</p>
           <div
             onClick={() => onNavigate('site-analysis')}
             className="inline-flex items-center gap-1.5 text-[14px] font-medium text-brand-600 cursor-pointer hover:gap-2.5 transition-all"
