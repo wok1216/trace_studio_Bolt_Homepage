@@ -10,7 +10,7 @@ interface SiteAnalysisPageProps {
   onAnalysisComplete: (address: string, data: SiteAnalysisData, projectName: string) => void;
 }
 
-const WEBHOOK_URL = 'https://wonjieun1216.app.n8n.cloud/webhook/arch_assistant';
+const WEBHOOK_URL = 'http://localhost:5678/webhook/arch_assistant';
 
 export default function SiteAnalysisPage({
   onNavigate,
