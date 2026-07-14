@@ -10,7 +10,7 @@ interface SiteAnalysisPageProps {
   onAnalysisComplete: (address: string, data: SiteAnalysisData, projectName: string) => void;
 }
 
-const WEBHOOK_URL = 'http://localhost:5678/webhook/arch_assistant';
+const WEBHOOK_URL = 'http://localhost:5678/webhook/trace_studio';
 
 export default function SiteAnalysisPage({
   onNavigate,
