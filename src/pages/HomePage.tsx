@@ -73,7 +73,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick }: HomeP
             Trace Studio
           </h1>
           <p className="text-lg lg:text-xl text-gray-400 font-medium tracking-tight animate-fade-in-up">
-            AI Architecture Workspace
+            Thinking Partner for Architects
           </p>
           <p className="mt-6 text-[15px] lg:text-base text-gray-500 leading-relaxed max-w-2xl animate-fade-in-up">
             대지 분석부터 설계 검토까지, AI와 함께 건축 설계 워크플로우를 시작하세요.
