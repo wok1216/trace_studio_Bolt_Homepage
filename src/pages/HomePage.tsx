@@ -354,20 +354,6 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
             )}
           </div>
 
-          {/* Example chips */}
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-[11px] text-gray-400 flex items-center">예시</span>
-            {exampleAddresses.map(addr => (
-              <button
-                key={addr}
-                onClick={() => { setQuery(addr); setSelectedAddress(addr); }}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-50 text-gray-500 hover:bg-brand-50 hover:text-brand-600 transition-colors border border-gray-100"
-              >
-                {addr}
-              </button>
-            ))}
-          </div>
-
           {/* Error */}
           {analysisError && (
             <div className="flex items-start gap-2 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100 animate-fade-in">
