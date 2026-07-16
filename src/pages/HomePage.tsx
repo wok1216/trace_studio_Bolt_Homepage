@@ -86,8 +86,6 @@ const chatChips = [
   { icon: HelpCircle, label: '아직 잘 모르겠어요' },
 ];
 
-const exampleAddresses = ['천안시 서북구 불당동', '아산시 배방읍', '서울 강남구 역삼동'];
-
 // ── Address search (Kakao) ────────────────────────────────────
 const KAKAO_API_URL = 'https://dapi.kakao.com/v2/local/search/address.json';
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY || '';
