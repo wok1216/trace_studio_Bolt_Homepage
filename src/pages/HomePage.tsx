@@ -252,7 +252,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
       {/* ── Section 1: Recent Projects ── */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[18px] font-bold text-gray-900">진행 중 프로젝트</h2>
+          <h2 className="text-[18px] font-bold text-gray-900">내 프로젝트</h2>
           <button
             onClick={() => onNavigate('projects')}
             className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-600 transition-colors"
@@ -288,9 +288,8 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
               <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
                 <MapPin className="w-4 h-4 text-green-600" />
               </div>
-              <h3 className="text-[16px] font-bold text-gray-900">새 프로젝트 · 대지분석 시작하기</h3>
-            </div>
-            <p className="text-[12px] text-gray-400 ml-9 leading-relaxed">
+              <h3 className="text-[16px] font-bold text-gray-900">대지분석 시작하기</h3>
+            <p className="text-[11px] text-gray-400 ml-9 leading-relaxed">
               프로젝트 정보를 입력하면 대지를 한 번에 분석해드려요.
             </p>
           </div>
