@@ -284,10 +284,9 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
 {/* Card A: 대지분석 */}
 <Card className="p-6 lg:col-span-1 flex flex-col gap-4">
   <div className="flex items-start gap-2 mb-4">
-  <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+  <div className= w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center >
     <MapPin className="w-4 h-4 text-green-600" />
   </div>
-
   <div>
     <h3 className="text-[16px] font-bold text-gray-900">
       대지분석 시작하기
