@@ -19,8 +19,9 @@ import {
   Loader2,
   Building,
   Lock,
+  AlertCircle,
 } from 'lucide-react';
-import type { PageKey, Project } from '../types';
+import type { PageKey, Project, SiteAnalysisData } from '../types';
 import Card from '../components/Card';
 import ProjectCard from '../components/ProjectCard';
 import Button from '../components/Button';
@@ -29,6 +30,7 @@ interface HomePageProps {
   onNavigate: (page: PageKey) => void;
   projects: Project[];
   onProjectClick: (project: Project) => void;
+  onAnalysisComplete: (address: string, data: SiteAnalysisData, projectName: string) => void;
 }
 
 // ── Mock data ────────────────────────────────────────────────
@@ -90,6 +92,8 @@ const chatChips = [
 const KAKAO_API_URL = 'https://dapi.kakao.com/v2/local/search/address.json';
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY || '';
 
+const WEBHOOK_URL = 'http://localhost:5678/webhook/trace_studio';
+
 interface AddressSuggestion {
   id: string;
   label: string;
@@ -98,7 +102,7 @@ interface AddressSuggestion {
   jibunAddress: string;
 }
 
-export default function HomePage({ onNavigate, projects, onProjectClick }: HomePageProps) {
+export default function HomePage({ onNavigate, projects, onProjectClick, onAnalysisComplete }: HomePageProps) {
   // ── new-project card state ──
   const [projectName, setProjectName] = useState('');
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
@@ -115,6 +119,10 @@ export default function HomePage({ onNavigate, projects, onProjectClick }: HomeP
 
   // ── chat state ──
   const [chatInput, setChatInput] = useState('');
+
+  // ── analysis state ──
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // ── address search ──
   const searchAddress = useCallback(async (keyword: string) => {
@@ -190,8 +198,44 @@ export default function HomePage({ onNavigate, projects, onProjectClick }: HomeP
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  const handleStartAnalysis = () => {
-    if (selectedAddress) onNavigate('site-analysis');
+  const handleStartAnalysis = async () => {
+    if (!selectedAddress) return;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName: projectName.trim(), address: selectedAddress }),
+      });
+
+      let data: SiteAnalysisData | null = null;
+      try {
+        data = (await response.json()) as SiteAnalysisData;
+      } catch {
+        // response body is not JSON
+      }
+
+      if (!response.ok) {
+        if (data && typeof data === 'object' && 'error' in data) {
+          throw new Error(String((data as Record<string, unknown>).error));
+        } else if (data && typeof data === 'object' && 'message' in data) {
+          throw new Error(String((data as Record<string, unknown>).message));
+        } else {
+          throw new Error(`요청 실패 (${response.status})`);
+        }
+      }
+
+      if (!data) {
+        throw new Error('응답을 받지 못했습니다');
+      }
+
+      onAnalysisComplete(selectedAddress, data, projectName.trim());
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다');
+    } finally {
+      setAnalysisLoading(false);
+    }
   };
 
   const handleChatSend = () => {
@@ -324,16 +368,24 @@ export default function HomePage({ onNavigate, projects, onProjectClick }: HomeP
             ))}
           </div>
 
+          {/* Error */}
+          {analysisError && (
+            <div className="flex items-start gap-2 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-[12px] text-red-600 font-medium">{analysisError}</p>
+            </div>
+          )}
+
           {/* CTA */}
           <Button
             size="lg"
             fullWidth
-            disabled={!selectedAddress}
+            disabled={!selectedAddress || analysisLoading}
             onClick={handleStartAnalysis}
-            icon={<ArrowRight className="w-4 h-4" />}
+            icon={analysisLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             className="mt-auto"
           >
-            대지 분석 시작하기
+            {analysisLoading ? '분석 중...' : '대지 분석 시작하기'}
           </Button>
         </Card>
 

@@ -82,6 +82,7 @@ function App() {
             onNavigate={navigate}
             projects={projects}
             onProjectClick={handleProjectClick}
+            onAnalysisComplete={handleAnalysisComplete}
           />
         );
 
