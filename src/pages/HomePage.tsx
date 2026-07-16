@@ -291,7 +291,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
               <h3 className="text-[16px] font-bold text-gray-900">대지분석 시작하기</h3>
               <p className="text-[11px] text-gray-400 ml-9 leading-relaxed">
               프로젝트 정보를 입력하면 대지를 한 번에 분석해드려요.
-            </div>
+              </div>
           </div>
 
           {/* Project name */}
