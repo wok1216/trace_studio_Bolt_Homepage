@@ -300,7 +300,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
 </div>
   
   {/* Project name */}
-  <div className="mt-6">
+  <div className="mt-4">
             <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">프로젝트명</label>
             <input
               type="text"
