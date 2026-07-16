@@ -11,7 +11,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
   return (
     <Card hover onClick={onClick} className="overflow-hidden group">
       {/* Thumbnail */}
-      <div className="relative h-40 bg-gradient-to-br from-brand-50 via-blue-50 to-sky-50 overflow-hidden">
+      <div className="relative h-32 bg-gradient-to-br from-brand-50 via-blue-50 to-sky-50 overflow-hidden">
         {project.thumbnail ? (
           <img
             src={project.thumbnail}
@@ -31,7 +31,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
       </div>
 
       {/* Info */}
-      <div className="p-5">
+      <div className="p-4">
         <h3 className="text-[15px] font-semibold text-gray-900 mb-2 truncate">{project.name}</h3>
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
