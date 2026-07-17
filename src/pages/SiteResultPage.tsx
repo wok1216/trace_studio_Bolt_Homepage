@@ -60,22 +60,14 @@ const LEGAL_BASIS_KEYS = [
 ];
 
 function findValue(data: SiteAnalysisData, key: string): string {
-  const candidates = [key, key.replace(/([A-Z])/g, '_$1').toLowerCase()];
-  for (const candidate of candidates) {
-    if (candidate in data) {
-      const val = data[candidate];
-      if (val === null || val === undefined) return '확인 필요';
-      if (typeof val === 'string') return val || '확인 필요';
-      if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-      if (Array.isArray(val)) return val.length > 0 ? val.map(String).join(', ') : '확인 필요';
-      if (typeof val === 'object') {
-        return Object.entries(val as Record<string, unknown>)
-          .map(([k, v]) => `${k}: ${v ?? '-'}`)
-          .join(', ');
-      }
-    }
-  }
-  return '확인 필요';
+
+    const value = data[key as keyof SiteAnalysisData];
+
+    if (value === undefined || value === null || value === "")
+        return "확인 필요";
+
+    return String(value);
+
 }
 
 function buildTableRows(data:any){
