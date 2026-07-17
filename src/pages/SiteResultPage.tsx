@@ -33,7 +33,10 @@ interface TableRowData {
 }
 
 const FIELD_LABELS: Record<string, string> = {
-  location: '주소',
+  location: '위치',
+  land_area: '대지면적',
+  land_category: '지목',
+  pnu: 'PNU',
   useZone: '용도지역',
   useDistrict: '용도지구',
   useArea: '용도구역',
