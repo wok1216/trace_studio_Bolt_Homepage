@@ -33,17 +33,17 @@ interface TableRowData {
 }
 
 const FIELD_LABELS: Record<string, string> = {
-  address: '주소',
-  use_type: '용도지역',
-  use_district: '용도지구',
-  use_zone: '용도구역',
-  district_plan: '지구단위계획',
-  allowed_use: '허용용도',
-  building_coverage_ratio: '건폐율',
-  floor_area_ratio: '용적률',
-  max_height: '최고높이',
-  road_condition: '도로조건',
-  parking_standard: '주차기준',
+  location: '주소',
+  useZone: '용도지역',
+  useDistrict: '용도지구',
+  useArea: '용도구역',
+  districtPlan: '지구단위계획',
+  allowedUse: '허용용도',
+  buildingCoverage: '건폐율',
+  floorAreaRatio: '용적률',
+  maxHeight: '최고높이',
+  roadCondition: '도로조건',
+  parkingStandard: '주차기준',
 };
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
