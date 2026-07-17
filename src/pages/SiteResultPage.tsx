@@ -32,78 +32,55 @@ interface TableRowData {
   value: string;
 }
 
-const FIELD_LABELS = {
+const FIELD_LABELS: Record<string, string> = {
   address: "주소",
   land_area: "대지면적",
   base_use_zone: "용도지역",
   land_category: "지목",
   pnu: "PNU",
-  district_plan: "지구단위계획",
   allowed_use: "허용용도",
   building_coverage_ratio: "건폐율",
   floor_area_ratio: "용적률",
   max_height: "최고높이",
   road_condition: "도로조건",
   parking_standard: "주차기준",
+  public_open_space: "공개공지",
+  landscaping: "조경",
+  setback: "건축선 후퇴",
 };
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
 
-const LEGAL_BASIS_KEYS = [
-  'legalBasis',
-  'legal_basis',
-  'legalBases',
-  'legal_bases',
-  'laws',
-  'regulations',
-  '근거법령',
-];
+const ARRAY_FIELDS = new Set(['allowed_use', 'applied_law']);
 
 function findValue(data: SiteAnalysisData, key: string): string {
+  const value = data[key as keyof SiteAnalysisData];
 
-    const value = data[key as keyof SiteAnalysisData];
+  if (value === undefined) return "확인 필요";
+  if (value === null) return "";
 
-    if (value === undefined || value === null || value === "")
-        return "확인 필요";
-
-    return String(value);
-
-}
-
-function buildTableRows(data:any){
-
-  return FIELD_KEYS.map(key=>({
-
-      label: FIELD_LABELS[key],
-
-      value: findValue(data,key)
-
-  }));
-
-}
-
-function findLegalBasis(data: SiteAnalysisData): Record<string, string> | null {
-  for (const key of LEGAL_BASIS_KEYS) {
-    if (key in data) {
-      const val = data[key];
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        return val as Record<string, string>;
-      }
-      if (Array.isArray(val) && val.length > 0) {
-        const result: Record<string, string> = {};
-        for (const item of val) {
-          if (typeof item === 'object' && item !== null) {
-            const entry = item as Record<string, unknown>;
-            const field = String(entry.field ?? entry.item ?? entry.label ?? '');
-            const law = String(entry.law ?? entry.regulation ?? entry.basis ?? '');
-            if (field && law) result[field] = law;
-          }
-        }
-        return Object.keys(result).length > 0 ? result : null;
-      }
-    }
+  if (ARRAY_FIELDS.has(key) && Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : "확인 필요";
   }
-  return null;
+
+  return String(value);
+}
+
+function buildTableRows(data: SiteAnalysisData): TableRowData[] {
+  return FIELD_KEYS.map(key => ({
+    label: FIELD_LABELS[key],
+    value: findValue(data, key),
+  }));
+}
+
+function findLegalBasis(data: SiteAnalysisData): string | null {
+  const val = data['applied_law' as keyof SiteAnalysisData];
+  if (val === undefined) return null;
+  if (Array.isArray(val)) {
+    return val.length > 0 ? val.join(", ") : null;
+  }
+  if (val === null || val === "") return null;
+  return String(val);
 }
 
 export default function SiteResultPage({
@@ -214,14 +191,12 @@ export default function SiteResultPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Object.entries(legalBasis).map(([field, law]) => (
-                <TableRow key={field} className="border-gray-50">
-                  <TableCell className="font-medium text-gray-600">
-                    {field}
-                  </TableCell>
-                  <TableCell className="text-gray-800">{law}</TableCell>
-                </TableRow>
-              ))}
+              <TableRow className="border-gray-50">
+                <TableCell className="font-medium text-gray-600">
+                  적용 법령
+                </TableCell>
+                <TableCell className="text-gray-800">{legalBasis}</TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </Card>
