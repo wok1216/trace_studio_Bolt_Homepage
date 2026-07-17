@@ -20,6 +20,15 @@ import {
   TableCell,
 } from '../components/ui/table';
 
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+} from "react-leaflet";
+
+import L from "leaflet";
+
 interface SiteResultPageProps {
   address: string;
   data: SiteAnalysisData;
