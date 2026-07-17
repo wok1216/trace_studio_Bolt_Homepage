@@ -212,7 +212,8 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
       let data: SiteAnalysisData | null = null;
       try {
         data = (await response.json()) as SiteAnalysisData;
-        console.log("===== Webhook Response =====");
+
+        console.log("Is Array:", Array.isArray(data));
         console.log(data);
         console.log(JSON.stringify(data, null, 2));
 
