@@ -164,8 +164,15 @@ export default function SiteResultPage({
         {address && (
           <Card className="p-6 lg:p-8 shadow-soft-lg">
             <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-            <img
-              src={mapSrc}
+<MapContainer
+    center={[data.lat, data.lng]}
+    zoom={18}
+    style={{
+        height: "450px",
+        width: "100%",
+        borderRadius: "16px"
+    }}
+>
               alt={`정적 지도 - ${address}`}
               className="w-full rounded-2xl"
               onError={(e) => {
