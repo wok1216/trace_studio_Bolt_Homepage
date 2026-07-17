@@ -234,7 +234,15 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
         throw new Error('응답을 받지 못했습니다');
       }
 
-      onAnalysisComplete(selectedAddress, data, projectName.trim());
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      console.log("Result:", result);
+      
+      onAnalysisComplete(
+        selectedAddress,
+        result,
+        projectName.trim()
+      );
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다');
     } finally {
