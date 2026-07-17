@@ -32,21 +32,19 @@ interface TableRowData {
   value: string;
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  location: '위치',
-  land_area: '대지면적',
-  land_category: '지목',
-  pnu: 'PNU',
-  useZone: '용도지역',
-  useDistrict: '용도지구',
-  useArea: '용도구역',
-  districtPlan: '지구단위계획',
-  allowedUse: '허용용도',
-  buildingCoverage: '건폐율',
-  floorAreaRatio: '용적률',
-  maxHeight: '최고높이',
-  roadCondition: '도로조건',
-  parkingStandard: '주차기준',
+const FIELD_LABELS = {
+  address: "주소",
+  land_area: "대지면적",
+  base_use_zone: "용도지역",
+  land_category: "지목",
+  pnu: "PNU",
+  district_plan: "지구단위계획",
+  allowed_use: "허용용도",
+  building_coverage_ratio: "건폐율",
+  floor_area_ratio: "용적률",
+  max_height: "최고높이",
+  road_condition: "도로조건",
+  parking_standard: "주차기준",
 };
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
@@ -80,11 +78,16 @@ function findValue(data: SiteAnalysisData, key: string): string {
   return '확인 필요';
 }
 
-function buildTableRows(data: SiteAnalysisData): TableRowData[] {
-  return FIELD_KEYS.map((key) => ({
-    label: FIELD_LABELS[key],
-    value: findValue(data, key),
+function buildTableRows(data:any){
+
+  return FIELD_KEYS.map(key=>({
+
+      label: FIELD_LABELS[key],
+
+      value: findValue(data,key)
+
   }));
+
 }
 
 function findLegalBasis(data: SiteAnalysisData): Record<string, string> | null {
