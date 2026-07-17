@@ -164,9 +164,9 @@ export default function SiteResultPage({
         {address && (
           <Card className="p-6 lg:p-8 shadow-soft-lg">
             <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-<div className="w-full h-[450px] rounded-2xl bg-gray-100 flex items-center justify-center">
-  지도 영역
-</div>
+            <div className="w-full h-[450px] rounded-2xl bg-gray-100 flex items-center justify-center">
+              지도 영역
+            </div>
 
       {/* Legal Basis */}
       {legalBasis && (
