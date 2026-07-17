@@ -167,7 +167,8 @@ export default function SiteResultPage({
             <div className="w-full h-[450px] rounded-2xl bg-gray-100 flex items-center justify-center">
               지도 영역
             </div>
-
+          </Card>
+    )}
       {/* Legal Basis */}
       {legalBasis && (
         <Card className="p-6 lg:p-8 mb-8 shadow-soft-lg">
