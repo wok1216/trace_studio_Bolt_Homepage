@@ -168,7 +168,8 @@ export default function SiteResultPage({
               지도 영역
             </div>
           </Card>
-    )}
+        )}
+      </div>
       {/* Legal Basis */}
       {legalBasis && (
         <Card className="p-6 lg:p-8 mb-8 shadow-soft-lg">
