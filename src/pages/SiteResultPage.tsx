@@ -194,7 +194,7 @@ export default function SiteResultPage({
 >
   <TileLayer
     attribution="© OpenStreetMap contributors"
-    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    url="https://api.vworld.kr/req/wmts/1.0.0/{5CF463C1-1C14-3719-B19B-E20276B30F7D}/Base/{z}/{y}/{x}.png"
   />
 
   {data.lat && data.lng && (
