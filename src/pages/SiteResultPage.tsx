@@ -44,7 +44,7 @@ const FIELD_LABELS: Record<string, string> = {
   floor_area_ratio: "용적률",
   max_height: "최고높이",
   road_condition: "도로조건",
-  parking_standard: "주차기준",
+  parking_standard: "주차장설치기",
   public_open_space: "공개공지",
   landscaping: "조경",
   setback: "건축선 후퇴",
@@ -112,8 +112,15 @@ export default function SiteResultPage({
   console.log("lat =", data.lat);
   console.log("lng =", data.lng);
   
-  const lat = typeof data.lat === 'number' ? data.lat : 37.5665;
-  const lng = typeof data.lng === 'number' ? data.lng : 126.9780;
+const lat =
+  typeof data.lat === "number"
+    ? data.lat
+    : Number(data.lat) || 37.5665;
+
+const lng =
+  typeof data.lng === "number"
+    ? data.lng
+    : Number(data.lng) || 126.9780;
 
   return (
     <div className="animate-fade-in px-5 lg:px-10 py-8 lg:py-12">
