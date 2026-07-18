@@ -51,11 +51,12 @@ const markerIcon = new L.Icon({
 const FIELD_LABELS: Record<string, string> = {
   address: "주소",
   land_area: "대지면적",
-  building_coverage_ratio: "건폐율",
-  floor_area_ratio: "용적률",
   base_use_zone: "용도지역",
   land_category: "지목",
+  pnu: "PNU",
   allowed_use: "허용용도",
+  building_coverage_ratio: "건폐율",
+  floor_area_ratio: "용적률",
   max_height: "최고높이",
   road_condition: "도로조건",
   parking_standard: "주차기준",
@@ -150,41 +151,8 @@ export default function SiteResultPage({
         </div>
       </div>
 
-              {/* Static Map */}
-        {address && (
-          <Card className="p-6 lg:p-8 shadow-soft-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-            <MapContainer
-  center={[
-    data.lat ?? 37.5665,
-    data.lng ?? 126.9780,
-  ]}
-  zoom={17}
-  style={{
-    width: "100%",
-    height: "700px",
-    borderRadius: "16px",
-  }}
->
-  <TileLayer
-    attribution="© OpenStreetMap contributors"
-    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-  />
-
-  {data.lat && data.lng && (
-    <Marker
-      position={[data.lat, data.lng]}
-      icon={markerIcon}
-    >
-      <Popup>{address}</Popup>
-    </Marker>
-  )}
-</MapContainer>
-          </Card>
-        )}
-      
       {/* Table + Map side by side */}
-      <div className="space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Analysis Table */}
         <Card className="p-6 lg:p-8 shadow-soft-lg">
           <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
@@ -208,6 +176,38 @@ export default function SiteResultPage({
           </Table>
         </Card>
 
+        {/* Static Map */}
+        {address && (
+          <Card className="p-6 lg:p-8 shadow-soft-lg">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
+            <MapContainer
+  center={[
+    data.lat ?? 37.5665,
+    data.lng ?? 126.9780,
+  ]}
+  zoom={17}
+  style={{
+    width: "100%",
+    height: "450px",
+    borderRadius: "16px",
+  }}
+>
+  <TileLayer
+    attribution="© OpenStreetMap contributors"
+    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  />
+
+  {data.lat && data.lng && (
+    <Marker
+      position={[data.lat, data.lng]}
+      icon={markerIcon}
+    >
+      <Popup>{address}</Popup>
+    </Marker>
+  )}
+</MapContainer>
+          </Card>
+        )}
       </div>
       {/* Legal Basis */}
       {legalBasis && (
