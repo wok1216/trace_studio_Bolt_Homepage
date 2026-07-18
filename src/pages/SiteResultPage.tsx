@@ -94,19 +94,41 @@ export default function SiteResultPage({
   const rows = buildTableRows(data);
   const legalBasis = findLegalBasis(data);
 
-  function handleSave() {
+async function handleSave() {
+
+  try {
+
+    await fetch("http://localhost:5678/webhook/save_project", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+
+        projectName: prompt("프로젝트 이름을 입력하세요") || "새 프로젝트",
+
+        address,
+
+        analysis: data,
+
+      }),
+    });
+
     onSave();
+
     setSaved(true);
+
     setTimeout(() => setSaved(false), 2500);
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert("저장 실패");
+
   }
 
-  function handleDownloadPDF() {
-    // PDF download click event
-  }
-
-  function handleDownloadExcel() {
-    // Excel download click event
-  }
+}
   
   console.log("SiteResult data =", data);
   console.log("lat =", data.lat);
@@ -209,20 +231,6 @@ const lng =
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
-        <Button
-          variant="secondary"
-          icon={<FileText className="w-4 h-4" />}
-          onClick={handleDownloadPDF}
-        >
-          PDF 다운로드
-        </Button>
-        <Button
-          variant="secondary"
-          icon={<FileSpreadsheet className="w-4 h-4" />}
-          onClick={handleDownloadExcel}
-        >
-          Excel 다운로드
-        </Button>
         <Button
           icon={saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
           onClick={handleSave}
