@@ -163,7 +163,7 @@ export default function SiteResultPage({
   zoom={17}
   style={{
     width: "100%",
-    height: "450px",
+    height: "700px",
     borderRadius: "16px",
   }}
 >
