@@ -19,15 +19,7 @@ import {
   TableHead,
   TableCell,
 } from '../components/ui/table';
-
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-} from "react-leaflet";
-
-import L from "leaflet";
+import VWorldMap from '../components/VWorldMap';
 
 interface SiteResultPageProps {
   address: string;
@@ -40,13 +32,6 @@ interface TableRowData {
   label: string;
   value: string;
 }
-
-const markerIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
 
 const FIELD_LABELS: Record<string, string> = {
   address: "주소",
@@ -123,7 +108,8 @@ export default function SiteResultPage({
     // Excel download click event
   }
 
-  const mapSrc = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(address)}&zoom=16&size=600x400&key=`;
+  const lat = typeof data.lat === 'number' ? data.lat : 37.5665;
+  const lng = typeof data.lng === 'number' ? data.lng : 126.9780;
 
   return (
     <div className="animate-fade-in px-5 lg:px-10 py-8 lg:py-12">
@@ -180,32 +166,7 @@ export default function SiteResultPage({
         {address && (
           <Card className="p-6 lg:p-8 shadow-soft-lg">
             <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-            <MapContainer
-  center={[
-    data.lat ?? 37.5665,
-    data.lng ?? 126.9780,
-  ]}
-  zoom={17}
-  style={{
-    width: "100%",
-    height: "450px",
-    borderRadius: "16px",
-  }}
->
-  <TileLayer
-    attribution="© OpenStreetMap contributors"
-    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-  />
-
-  {data.lat && data.lng && (
-    <Marker
-      position={[data.lat, data.lng]}
-      icon={markerIcon}
-    >
-      <Popup>{address}</Popup>
-    </Marker>
-  )}
-</MapContainer>
+            <VWorldMap lat={lat} lng={lng} />
           </Card>
         )}
       </div>
