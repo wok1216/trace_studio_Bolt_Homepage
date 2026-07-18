@@ -180,9 +180,32 @@ export default function SiteResultPage({
         {address && (
           <Card className="p-6 lg:p-8 shadow-soft-lg">
             <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-            <div className="w-full h-[450px] rounded-2xl bg-gray-100 flex items-center justify-center">
-              지도 영역
-            </div>
+            <MapContainer
+  center={[
+    data.lat ?? 37.5665,
+    data.lng ?? 126.9780,
+  ]}
+  zoom={17}
+  style={{
+    width: "100%",
+    height: "450px",
+    borderRadius: "16px",
+  }}
+>
+  <TileLayer
+    attribution="© OpenStreetMap contributors"
+    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  />
+
+  {data.lat && data.lng && (
+    <Marker
+      position={[data.lat, data.lng]}
+      icon={markerIcon}
+    >
+      <Popup>{address}</Popup>
+    </Marker>
+  )}
+</MapContainer>
           </Card>
         )}
       </div>
