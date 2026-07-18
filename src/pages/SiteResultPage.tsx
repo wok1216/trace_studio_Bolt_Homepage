@@ -123,8 +123,6 @@ export default function SiteResultPage({
     // Excel download click event
   }
 
-  const mapSrc = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(address)}&zoom=16&size=600x400&key=`;
-
   return (
     <div className="animate-fade-in px-5 lg:px-10 py-8 lg:py-12">
       {/* Back */}
@@ -194,7 +192,7 @@ export default function SiteResultPage({
 >
   <TileLayer
     attribution="© OpenStreetMap contributors"
-    url="https://api.vworld.kr/req/wmts/1.0.0/{5CF463C1-1C14-3719-B19B-E20276B30F7D}/Base/{z}/{y}/{x}.png"
+    url="https://api.vworld.kr/req/wmts/1.0.0/5CF463C1-1C14-3719-B19B-E20276B30F7D/Base/{z}/{y}/{x}.png"
   />
 
   {data.lat && data.lng && (
