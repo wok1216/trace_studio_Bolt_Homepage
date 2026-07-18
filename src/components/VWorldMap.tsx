@@ -44,6 +44,8 @@ function createVWorldBaseLayer(type: BaseMapType): TileLayer<XYZ> {
 }
 
 export default function VWorldMap({ lat, lng }: VWorldMapProps) {
+  console.log("lat =", lat);
+  console.log("lng =", lng);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
