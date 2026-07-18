@@ -64,6 +64,8 @@ export default function VWorldMap({ lat, lng }: VWorldMapProps) {
         if (cancelled || !containerRef.current || !window.vw) return;
 
         const vw = window.vw;
+        console.log("VWORLD OBJECT =", vw);
+        console.log("VWORLD KEYS =", Object.keys(vw || {}));
 
         const map = new vw.Map({
           container: containerRef.current,
