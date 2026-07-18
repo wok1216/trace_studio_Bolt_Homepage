@@ -152,7 +152,7 @@ export default function SiteResultPage({
       </div>
 
       {/* Table + Map side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="space-y-8">
         {/* Analysis Table */}
         <Card className="p-6 lg:p-8 shadow-soft-lg">
           <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
