@@ -296,17 +296,21 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
 
         {/* Card A: 대지분석 */}
         <Card className="p-6 lg:col-span-1 flex flex-col gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
-                <MapPin className="w-4 h-4 text-green-600" />
-              </div>
-              <h3 className="text-[16px] font-bold text-gray-900">새 프로젝트 · 대지분석 시작하기</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
+              <MapPin className="w-4 h-4 text-green-600" />
             </div>
-            <p className="text-[12px] text-gray-400 ml-9 leading-relaxed">
-              프로젝트 정보를 입력하면 대지를 한 번에 분석해드려요.
-            </p>
-          </div>
+            
+            <div>
+              <h3 className="text-[16px] font-bold text-gray-900">
+                대지분석 시작하기
+              </h3>
+
+    <p className="text-[11px] text-gray-400">
+      주소를 입력하면 대지를 한 번에 분석해드려요.
+    </p>
+  </div>
+</div>
 
           {/* Project name */}
           <div className="mt-6">
