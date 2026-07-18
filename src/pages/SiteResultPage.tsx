@@ -151,32 +151,7 @@ export default function SiteResultPage({
         </div>
       </div>
 
-      {/* Table + Map side by side */}
-      <div className="space-y-8">
-        {/* Analysis Table */}
-        <Card className="p-6 lg:p-8 shadow-soft-lg">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-100">
-                <TableHead className="w-[40%]">항목</TableHead>
-                <TableHead>결과</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.label} className="border-gray-50">
-                  <TableCell className="font-medium text-gray-600">
-                    {row.label}
-                  </TableCell>
-                  <TableCell className="text-gray-800">{row.value}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-
-        {/* Static Map */}
+              {/* Static Map */}
         {address && (
           <Card className="p-6 lg:p-8 shadow-soft-lg">
             <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
@@ -208,6 +183,32 @@ export default function SiteResultPage({
 </MapContainer>
           </Card>
         )}
+      
+      {/* Table + Map side by side */}
+      <div className="space-y-8">
+        {/* Analysis Table */}
+        <Card className="p-6 lg:p-8 shadow-soft-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-gray-100">
+                <TableHead className="w-[40%]">항목</TableHead>
+                <TableHead>결과</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.label} className="border-gray-50">
+                  <TableCell className="font-medium text-gray-600">
+                    {row.label}
+                  </TableCell>
+                  <TableCell className="text-gray-800">{row.value}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+
       </div>
       {/* Legal Basis */}
       {legalBasis && (
