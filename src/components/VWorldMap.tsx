@@ -8,6 +8,7 @@ interface VWorldMapProps {
 declare global {
   interface Window {
     vw?: any;
+    ol?: any;
   }
 }
 
@@ -16,6 +17,7 @@ const VWORLD_DOMAIN = 'localhost';
 const VWORLD_SCRIPT_SRC = `https://map.vworld.kr/js/vworldMapInit.js.do?apiKey=${VWORLD_API_KEY}&domain=${VWORLD_DOMAIN}`;
 
 let scriptPromise: Promise<void> | null = null;
+let mapInstanceId = 0;
 
 function loadVWorldScript(): Promise<void> {
   if (scriptPromise) return scriptPromise;
@@ -27,7 +29,7 @@ function loadVWorldScript(): Promise<void> {
     }
 
     const existing = document.querySelector(
-      `script[src^="https://map.vworld.kr/js/vworldMapInit.js.do"]`,
+      'script[src^="https://map.vworld.kr/js/vworldMapInit.js.do"]',
     ) as HTMLScriptElement | null;
 
     if (existing) {
@@ -36,7 +38,9 @@ function loadVWorldScript(): Promise<void> {
         return;
       }
       existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('VWorld script load failed')));
+      existing.addEventListener('error', () =>
+        reject(new Error('VWorld script load failed')),
+      );
       return;
     }
 
@@ -51,6 +55,15 @@ function loadVWorldScript(): Promise<void> {
   return scriptPromise;
 }
 
+const MARKER_ICON_URL =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">' +
+      '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="#e74c3c"/>' +
+      '<circle cx="12" cy="12" r="6" fill="white"/>' +
+      '</svg>',
+  );
+
 export default function VWorldMap({ lat, lng }: VWorldMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -58,38 +71,61 @@ export default function VWorldMap({ lat, lng }: VWorldMapProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const domId = `vworld-map-${++mapInstanceId}`;
 
     loadVWorldScript()
       .then(() => {
-        if (cancelled || !containerRef.current || !window.vw) return;
+        if (cancelled || !containerRef.current || !window.vw || !window.ol) return;
 
         const vw = window.vw;
-        console.log("VWORLD OBJECT =", vw);
-        console.log("VWORLD KEYS =", Object.keys(vw || {}));
+        const ol = window.ol;
 
-        const map = new vw.Map({
-          container: containerRef.current,
-          center: [lng, lat],
-          zoom: 17,
-          basemapType: vw.Map.BasemapType.GRAPHIC,
+        containerRef.current.id = domId;
+
+        const map = vw.ol3.Map.create({
+          apiKey: VWORLD_API_KEY,
+          domId: domId,
+          basemapType: vw.ol3.Map.BasemapType.GRAPHIC,
         });
 
         mapRef.current = map;
 
-        const marker = new vw.Marker({
-          coordinates: [lng, lat],
+        const view = map.getView();
+        view.setCenter(ol.proj.transform([lng, lat], 'EPSG:4326', 'EPSG:3857'));
+        view.setZoom(17);
+
+        const markerFeature = new ol.Feature({
+          geometry: new ol.geom.Point(
+            ol.proj.transform([lng, lat], 'EPSG:4326', 'EPSG:3857'),
+          ),
         });
-        marker.setMap(map);
+
+        markerFeature.setStyle(
+          new ol.style.Style({
+            image: new ol.style.Icon({
+              src: MARKER_ICON_URL,
+              anchor: [0.5, 1.0],
+              scale: 1.0,
+            }),
+          }),
+        );
+
+        const vectorLayer = new ol.layer.Vector({
+          source: new ol.source.Vector({ features: [markerFeature] }),
+        });
+
+        map.addLayer(vectorLayer);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : '지도 로드 실패');
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : '지도 로드 실패');
       });
 
     return () => {
       cancelled = true;
       if (mapRef.current) {
         try {
-          mapRef.current.destroy();
+          mapRef.current.setTarget(null);
         } catch {
           // ignore
         }
@@ -106,5 +142,10 @@ export default function VWorldMap({ lat, lng }: VWorldMapProps) {
     );
   }
 
-  return <div ref={containerRef} style={{ width: '100%', height: '450px', borderRadius: '16px' }} />;
+  return (
+    <div
+      ref={containerRef}
+      style={{ width: '100%', height: '450px', borderRadius: '16px' }}
+    />
+  );
 }
