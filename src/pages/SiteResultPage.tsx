@@ -107,7 +107,11 @@ export default function SiteResultPage({
   function handleDownloadExcel() {
     // Excel download click event
   }
-
+  
+  console.log("SiteResult data =", data);
+  console.log("lat =", data.lat);
+  console.log("lng =", data.lng);
+  
   const lat = typeof data.lat === 'number' ? data.lat : 37.5665;
   const lng = typeof data.lng === 'number' ? data.lng : 126.9780;
 
