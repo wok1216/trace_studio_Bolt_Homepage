@@ -78,6 +78,7 @@ const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY || '';
 
 const WEBHOOK_URL = 'http://localhost:5678/webhook/trace_studio';
 const JOB_LIST_URL = 'http://localhost:5678/webhook/job_list';
+const EVENT_URL = 'http://localhost:5678/webhook/event_list';
 
 interface AddressSuggestion {
   id: string;
@@ -100,6 +101,12 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   const containerRef = useRef<HTMLDivElement>(null);
   const [jobList, setJobList] = useState<any[]>([]);
   const [jobLoading, setJobLoading] = useState(false);
+  const [hasArchitecture, setHasArchitecture] = useState(true);
+  const [contestList, setContestList] = useState<any[]>([]);
+  const [educationList, setEducationList] = useState<any[]>([]);
+  const [eventList, setEventList] = useState<any[]>([]);
+  const [cultureTab, setCultureTab] = useState('contest');
+  
 
   // ── insights / recommendations state ──
   const [activeTab, setActiveTab] = useState<RecommendTab>('채용 공고');
@@ -188,6 +195,46 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
    }, []);
 
    useEffect(() => {
+      console.log("Home useEffect");
+      console.log("loadJobs 실행");
+      console.log("loadEvents 실행");
+      console.log(EVENT_URL);
+
+    const loadEvents = async () => {
+      console.log("loadEvents 함수 진입");
+      
+      try {
+        const response = await fetch(EVENT_URL,{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json"
+          }
+        });
+
+const data = await response.json();
+
+console.log(data);
+
+const result = Array.isArray(data)
+  ? data[0]
+  : data;
+
+setContestList(result?.contests ?? []);
+setEventList(result?.events ?? []);
+setEducationList(result?.education ?? []);
+
+const data = await response.json();
+
+setContestList(data.contests ?? []);
+setEventList(data.events ?? []);
+setEducationList(data.education ?? []);
+
+  } catch(err){
+    console.error(err);
+  }
+
+};
+
   const loadJobs = async () => {
     try {
       setJobLoading(true);
@@ -200,8 +247,19 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
       });
 
       const data = await response.json();
+      
+      console.log("response.ok =", response.ok);
+      console.log("job api =", data);
+      
+      const list = Array.isArray(data?.[0]?.data) ? data[0].data : [];
 
-      setJobList(Array.isArray(data.data) ? data.data : []);
+      setHasArchitecture(data?.[0]?.hasArchitecture ?? false);
+      
+      setJobList(list);
+      
+      console.log("jobList length =", list.length);
+      
+      setJobList(list);
     } catch (err) {
       console.error(err);
     } finally {
@@ -210,6 +268,9 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   };
 
   loadJobs();
+  console.log("loadEvents 호출");
+  loadEvents();
+
 }, []);
 
   const handleStartAnalysis = async () => {
@@ -406,76 +467,109 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
           </Button>
         </Card>
 
-        {/* Card B: 오늘의 인사이트 */}
+        {/* Card B: 오늘의 건축정보 */}
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center">
               <Lightbulb className="w-4 h-4 text-yellow-500" />
             </div>
             <div>
-              <h3 className="text-[16px] font-bold text-gray-900">오늘의 인사이트</h3>
-              <p className="text-[11px] text-gray-400">AI가 선별한 오늘의 건축·설계 인사이트</p>
+              <h3 className="text-[16px] font-bold text-gray-900">오늘의 건축정보</h3>
+              <p className="text-[11px] text-gray-400">공모전·행사·교육 정보를 확인하세요.</p>
             </div>
           </div>
+          
+          <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100">
 
-          <div className="flex flex-col gap-3 flex-1">
-            {insights.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={i}
-                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left group w-full"
-                >
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center mt-0.5`}>
-                    <Icon className={`w-4 h-4 ${item.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-gray-800 mb-0.5">{item.title}</p>
-                    <p className="text-[12px] text-gray-400 leading-relaxed line-clamp-2">{item.desc}</p>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-brand-500 flex-shrink-0 mt-1 transition-colors" />
-                </button>
-              );
-            })}
-          </div>
+            {(() => {
+  const cultureList =
+    cultureTab === "contest"
+      ? contestList
+      : cultureTab === "event"
+      ? eventList
+      : educationList;
 
-          <button className="text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors">
-            모든 인사이트 보기 <ArrowRight className="w-3 h-3" />
-          </button>
+  return cultureList.map((item: any, i: number) => (
+    <button
+      key={i}
+      onClick={() => window.open(item.url, "_blank")}
+      className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-semibold text-gray-800 truncate">
+          {item.title}
+        </p>
+
+        <p className="text-[11px] text-gray-400 truncate">
+          {item.period}
+        </p>
+      </div>
+    </button>
+  ));
+})()}
+            
+            <button
+            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+              cultureTab === "contest"
+              ? "bg-white shadow-soft text-gray-900"
+              : "text-gray-400 hover:text-gray-600"
+            }`}
+            >
+              공모전
+              </button>
+              
+              <button
+              
+            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+                cultureTab === "event"
+              ? "bg-white shadow-soft text-gray-900"
+              : "text-gray-400 hover:text-gray-600"
+           }`}
+           >
+             행사
+             </button>
+
+            <button
+            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+                cultureTab === "education"
+              ? "bg-white shadow-soft text-gray-900"
+              : "text-gray-400 hover:text-gray-600"
+           }`}
+           >
+             교육
+             </button>
+             
+             </div>
+
+
         </Card>
 
-        {/* Card C: 오늘의 추천 */}
+        {/* Card C: 오늘의 채용공고 */}
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
               <Briefcase className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-[16px] font-bold text-gray-900">오늘의 추천</h3>
-              <p className="text-[11px] text-gray-400">취업·공모전·행사 등 맞춤 정보를 확인하세요</p>
+              <h3 className="text-[16px] font-bold text-gray-900">오늘의 채용공고</h3>
+              <p className="text-[11px] text-gray-400">채용정보를 확인하세요</p>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100">
-            {recommendTabs.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${activeTab === tab ? 'bg-white shadow-soft text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
           {/* List */}
-          <div className="flex flex-col gap-2.5 flex-1">
+          <div className="flex flex-col gap-1 flex-1">
+            {!hasArchitecture && (
+                  <div className="mb-1 rounded-lg bg-gray-50 border border-gray-100 px-3 py-1.5 flex flex-col items-center justify-center text-center">
+                   <p className="text-[11px] font-medium text-gray-500">
+                건축 관련 공고가 없어 공공기관 채용을 표시합니다.
+                  </p>
+                   </div>
+                  )}
            {jobList.map((item: any, i: number) => (
   <button
     key={i}
     onClick={() => window.open(item.srcUrl, "_blank")}
-    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
+    className="flex items-center gap-1 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
   >
     <div className="flex-1 min-w-0">
       <p className="text-[13px] font-semibold text-gray-800 truncate">
@@ -493,23 +587,27 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
       </p>
 
       <p className="text-[11px] font-medium text-brand-500">
-        {item.closingDate}
+        {item.dday}
       </p>
     </div>
   </button>
 ))}
           </div>
-
-          <button className="text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors">
-            모든 채용 정보 보기 <ArrowRight className="w-3 h-3" />
+          <button
+            onClick={() => window.open("https://vmspace.com/job/job.html", "_blank")}
+            className="text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
+          >
+            건축 채용공고 더보기
+            <ArrowRight className="w-3 h-3" />
           </button>
+
         </Card>
       </section>
 
       {/* ── Section 3: AI Chat ── */}
       <section>
         <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-1 mb-4">
             <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center">
               <Bot className="w-5 h-5 text-white" />
             </div>
