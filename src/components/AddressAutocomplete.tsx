@@ -59,6 +59,7 @@ export default function AddressAutocomplete({
       }
 
       const data = await response.json();
+      console.log(data);
       const docs: Array<Record<string, unknown>> = data.documents || [];
       const results: AddressSuggestion[] = [];
 

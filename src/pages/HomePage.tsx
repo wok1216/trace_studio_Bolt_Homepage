@@ -201,7 +201,7 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
 
       const data = await response.json();
 
-      setJobList(Array.isArray(data) ? data : []);
+      setJobList(Array.isArray(data.data) ? data.data : []);
     } catch (err) {
       console.error(err);
     } finally {
