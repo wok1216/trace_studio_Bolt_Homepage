@@ -41,15 +41,14 @@ const FIELD_LABELS: Record<string, string> = {
   base_use_zone: "용도지역",
   land_category: "지목",
   pnu: "PNU",
-  allowed_use: "허용용도",
   building_coverage_ratio: "건폐율",
   floor_area_ratio: "용적률",
-  max_height: "최고높이",
+  allowed_use: "행위가능건축물",
+  max_height: "높이제한",
   road_condition: "도로조건",
-  parking_standard: "주차장설치기",
-  public_open_space: "공개공지",
-  landscaping: "조경",
-  setback: "건축선 후퇴",
+  setback: "건축선",
+  site_restriction: "대지안의 공지",
+  applied_law: "적용법령",
 };
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
