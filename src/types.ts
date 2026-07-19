@@ -5,7 +5,8 @@ export type PageKey =
   | 'design'
   | 'review'
   | 'projects'
-  | 'site-result';
+  | 'site-result'
+  | 'project-detail';
 
 export interface FeatureCardData {
   id: string;

@@ -1,0 +1,215 @@
+import {
+  MapPin,
+  ArrowLeft,
+  FileSpreadsheet,
+  Scale,
+  FileText,
+} from 'lucide-react';
+import type { PageKey, SiteAnalysisData } from '../types';
+import Card from '../components/Card';
+import Button from '../components/Button';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../components/ui/table';
+import VWorldMap from '../components/VWorldMap';
+
+interface ProjectDetailPageProps {
+  name: string;
+  address: string;
+  date: string;
+  data: SiteAnalysisData;
+  onNavigate: (page: PageKey) => void;
+}
+
+interface TableRowData {
+  label: string;
+  value: string;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  address: "주소",
+  land_area: "대지면적",
+  base_use_zone: "용도지역",
+  land_category: "지목",
+  pnu: "PNU",
+  allowed_use: "허용용도",
+  building_coverage_ratio: "건폐율",
+  floor_area_ratio: "용적률",
+  max_height: "최고높이",
+  road_condition: "도로조건",
+  parking_standard: "주차장설치기",
+  public_open_space: "공개공지",
+  landscaping: "조경",
+  setback: "건축선 후퇴",
+};
+
+const FIELD_KEYS = Object.keys(FIELD_LABELS);
+
+const ARRAY_FIELDS = new Set(['allowed_use', 'applied_law']);
+
+function findValue(data: SiteAnalysisData, key: string): string {
+  const value = data[key as keyof SiteAnalysisData];
+  if (value === undefined) return "확인 필요";
+  if (value === null) return "";
+  if (ARRAY_FIELDS.has(key) && Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : "확인 필요";
+  }
+  return String(value);
+}
+
+function buildTableRows(data: SiteAnalysisData): TableRowData[] {
+  return FIELD_KEYS.map(key => ({
+    label: FIELD_LABELS[key],
+    value: findValue(data, key),
+  }));
+}
+
+function findLegalBasis(data: SiteAnalysisData): string | null {
+  const val = data['applied_law' as keyof SiteAnalysisData];
+  if (val === undefined) return null;
+  if (Array.isArray(val)) {
+    return val.length > 0 ? val.join(", ") : null;
+  }
+  if (val === null || val === "") return null;
+  return String(val);
+}
+
+export default function ProjectDetailPage({
+  name,
+  address,
+  date,
+  data,
+  onNavigate,
+}: ProjectDetailPageProps) {
+  const rows = buildTableRows(data);
+  const legalBasis = findLegalBasis(data);
+
+  const lat =
+    typeof data.lat === "number"
+      ? data.lat
+      : Number(data.lat) || 37.5665;
+
+  const lng =
+    typeof data.lng === "number"
+      ? data.lng
+      : Number(data.lng) || 126.9780;
+
+  function handleDownloadPDF() {
+    // PDF download click event
+  }
+
+  function handleDownloadExcel() {
+    // Excel download click event
+  }
+
+  return (
+    <div className="animate-fade-in px-5 lg:px-10 py-8 lg:py-12">
+      {/* Back */}
+      <button
+        onClick={() => onNavigate('projects')}
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        프로젝트 목록
+      </button>
+
+      {/* Header */}
+      <div className="mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-100 mb-4">
+          <MapPin className="w-3.5 h-3.5 text-brand-600" />
+          <span className="text-[12px] font-medium text-brand-600">{date}</span>
+        </div>
+        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">
+          {name}
+        </h1>
+        <div className="flex items-center gap-2 text-[15px] text-gray-500">
+          <MapPin className="w-4 h-4 text-gray-400" />
+          {address}
+        </div>
+      </div>
+
+      {/* Table + Map side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Analysis Table */}
+        <Card className="p-6 lg:p-8 shadow-soft-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-gray-100">
+                <TableHead className="w-[40%]">항목</TableHead>
+                <TableHead>결과</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.label} className="border-gray-50">
+                  <TableCell className="font-medium text-gray-600">
+                    {row.label}
+                  </TableCell>
+                  <TableCell className="text-gray-800">{row.value}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+
+        {/* Static Map */}
+        {address && (
+          <Card className="p-6 lg:p-8 shadow-soft-lg">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
+            <VWorldMap lat={lat} lng={lng} />
+          </Card>
+        )}
+      </div>
+
+      {/* Legal Basis */}
+      {legalBasis && (
+        <Card className="p-6 lg:p-8 mb-8 shadow-soft-lg">
+          <div className="flex items-center gap-2 mb-6">
+            <Scale className="w-5 h-5 text-brand-600" />
+            <h2 className="text-xl font-bold text-gray-900">근거법령</h2>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-gray-100">
+                <TableHead className="w-[40%]">항목</TableHead>
+                <TableHead>근거법령</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow className="border-gray-50">
+                <TableCell className="font-medium text-gray-600">
+                  적용 법령
+                </TableCell>
+                <TableCell className="text-gray-800">{legalBasis}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="secondary"
+          icon={<FileText className="w-4 h-4" />}
+          onClick={handleDownloadPDF}
+        >
+          PDF 다운로드
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<FileSpreadsheet className="w-4 h-4" />}
+          onClick={handleDownloadExcel}
+        >
+          Excel 다운로드
+        </Button>
+      </div>
+    </div>
+  );
+}

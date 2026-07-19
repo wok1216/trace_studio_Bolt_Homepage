@@ -11,6 +11,7 @@ import TopBar from './components/TopBar';
 import HomePage from './pages/HomePage';
 import SiteAnalysisPage from './pages/SiteAnalysisPage';
 import SiteResultPage from './pages/SiteResultPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectsPage from './pages/ProjectsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 
@@ -23,6 +24,7 @@ function App() {
     data: SiteAnalysisData;
     projectName: string;
   } | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     setProjects(loadProjects());
@@ -53,12 +55,14 @@ function App() {
     };
     const updated = addProject(project);
     setProjects(updated);
+    setSelectedProject(project);
+    navigate('projects');
   }
 
   function handleProjectClick(project: Project) {
     if (project.analysisData) {
-      setCurrentAnalysis({ address: project.address, data: project.analysisData, projectName: project.name });
-      navigate('site-result');
+      setSelectedProject(project);
+      navigate('project-detail');
     } else {
       navigate('site-analysis');
     }
@@ -72,6 +76,7 @@ function App() {
     review: '설계 검토',
     projects: '프로젝트',
     'site-result': '대지 분석 결과',
+    'project-detail': '프로젝트 상세',
   };
 
   const renderPage = () => {
@@ -105,6 +110,21 @@ function App() {
             data={currentAnalysis.data}
             onNavigate={navigate}
             onSave={handleSaveProject}
+          />
+        );
+
+      case 'project-detail':
+        if (!selectedProject) {
+          navigate('projects');
+          return null;
+        }
+        return (
+          <ProjectDetailPage
+            name={selectedProject.name}
+            address={selectedProject.address}
+            date={selectedProject.date}
+            data={selectedProject.analysisData as SiteAnalysisData}
+            onNavigate={navigate}
           />
         );
 
