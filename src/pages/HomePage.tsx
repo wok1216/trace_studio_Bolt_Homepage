@@ -20,8 +20,18 @@ import {
   Building,
   Lock,
   AlertCircle,
+  Calendar,
 } from 'lucide-react';
 import type { PageKey, Project, SiteAnalysisData } from '../types';
+
+interface JobPosting {
+  company: string;
+  title: string;
+  hireType: string;
+  region: string;
+  closingDate: string;
+  srcUrl?: string;
+}
 import Card from '../components/Card';
 import ProjectCard from '../components/ProjectCard';
 import Button from '../components/Button';
@@ -93,6 +103,12 @@ const KAKAO_API_URL = 'https://dapi.kakao.com/v2/local/search/address.json';
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY || '';
 
 const WEBHOOK_URL = 'http://localhost:5678/webhook/trace_studio';
+const JOB_LIST_URL = 'http://localhost:5678/webhook/job_list';
+
+function formatClosingDate(raw: string): string {
+  if (!raw || raw.length !== 8 || !/^\d{8}$/.test(raw)) return raw || '-';
+  return `${raw.slice(0, 4)}.${raw.slice(4, 6)}.${raw.slice(6, 8)}`;
+}
 
 interface AddressSuggestion {
   id: string;
@@ -123,6 +139,11 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   // ── analysis state ──
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // ── recruitment state ──
+  const [jobs, setJobs] = useState<JobPosting[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState(false);
 
   // ── address search ──
   const searchAddress = useCallback(async (keyword: string) => {
@@ -197,6 +218,29 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   }, []);
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setJobsLoading(true);
+      setJobsError(false);
+      try {
+        const res = await fetch(JOB_LIST_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) throw new Error('요청 실패');
+        const data = await res.json();
+        const list: JobPosting[] = Array.isArray(data) ? data : [];
+        if (!cancelled) setJobs(list);
+      } catch {
+        if (!cancelled) setJobsError(true);
+      } finally {
+        if (!cancelled) setJobsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleStartAnalysis = async () => {
     if (!selectedAddress) return;
@@ -480,7 +524,62 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
         </Card>
       </section>
 
-      {/* ── Section 3: AI Chat ── */}
+      {/* ── Section 3: Recruitment ── */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[18px] font-bold text-gray-900">채용 정보</h2>
+        </div>
+
+        {jobsLoading ? (
+          <Card className="p-10 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+          </Card>
+        ) : jobsError ? (
+          <Card className="p-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+              <AlertCircle className="w-5 h-5 text-gray-300" />
+            </div>
+            <p className="text-[14px] font-medium text-gray-400">채용 정보를 불러올 수 없습니다.</p>
+          </Card>
+        ) : jobs.length === 0 ? (
+          <Card className="p-10 text-center">
+            <p className="text-[14px] font-medium text-gray-400">채용 정보가 없습니다.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {jobs.map((job, i) => {
+              const clickable = !!job.srcUrl && /^https?:\/\/.+/.test(job.srcUrl);
+              return (
+                <Card
+                  key={i}
+                  className={`p-5 flex flex-col gap-2 transition-all ${clickable ? 'cursor-pointer hover:shadow-soft-lg hover:-translate-y-0.5' : 'opacity-60'}`}
+                  {...(clickable ? { onClick: () => window.open(job.srcUrl, '_blank') } : {})}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{job.title}</h3>
+                    <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-md bg-brand-50 text-[11px] font-medium text-brand-600">
+                      {job.hireType}
+                    </span>
+                  </div>
+                  <p className="text-[13px] font-medium text-gray-600">{job.company}</p>
+                  <div className="flex items-center gap-3 mt-1 text-[12px] text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {job.region}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {formatClosingDate(job.closingDate)}
+                    </span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ── Section 4: AI Chat ── */}
       <section>
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
