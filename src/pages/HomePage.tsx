@@ -61,23 +61,7 @@ const insights = [
 const recommendTabs = ['채용 공고', '공모전', '행사/교육'] as const;
 type RecommendTab = (typeof recommendTabs)[number];
 
-const recommendations: Record<RecommendTab, { org: string; role: string; location: string; dday: number }[]> = {
-  '채용 공고': [
-    { org: '삼우종합건축사사무소', role: '건축 설계 신입/경력 채용', location: '서울', dday: -7 },
-    { org: '정림건축종합건축사사무소', role: 'BIM 설계 경력 채용', location: '서울', dday: -10 },
-    { org: '해안종합건축사사무소', role: '건축 설계 인턴 채용', location: '부산', dday: -5 },
-  ],
-  '공모전': [
-    { org: '국토교통부', role: '2026 공공건축 설계공모', location: '전국', dday: -14 },
-    { org: '서울시', role: '청년 건축가 아이디어 공모', location: '서울', dday: -21 },
-    { org: '한국건축가협회', role: '지역재생 건축 설계 공모', location: '전국', dday: -30 },
-  ],
-  '행사/교육': [
-    { org: '건축도시공간연구소', role: 'BIM 실무 워크숍', location: '서울', dday: -3 },
-    { org: '한국건축가협회', role: '친환경 건축 세미나', location: '온라인', dday: -7 },
-    { org: '대한건축학회', role: '2026 추계 학술발표대회', location: '대전', dday: -45 },
-  ],
-};
+
 
 const chatChips = [
   { icon: Sun, label: '채광과 자연환경' },
@@ -93,6 +77,7 @@ const KAKAO_API_URL = 'https://dapi.kakao.com/v2/local/search/address.json';
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY || '';
 
 const WEBHOOK_URL = 'http://localhost:5678/webhook/trace_studio';
+const JOB_LIST_URL = 'http://localhost:5678/webhook/job_list';
 
 interface AddressSuggestion {
   id: string;
@@ -113,6 +98,8 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   const [activeIndex, setActiveIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [jobList, setJobList] = useState<any[]>([]);
+  const [jobLoading, setJobLoading] = useState(false);
 
   // ── insights / recommendations state ──
   const [activeTab, setActiveTab] = useState<RecommendTab>('채용 공고');
@@ -196,7 +183,34 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+  useEffect(() => () => { 
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+   }, []);
+
+   useEffect(() => {
+  const loadJobs = async () => {
+    try {
+      setJobLoading(true);
+
+      const response = await fetch(JOB_LIST_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      setJobList(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setJobLoading(false);
+    }
+  };
+
+  loadJobs();
+}, []);
 
   const handleStartAnalysis = async () => {
     if (!selectedAddress) return;
@@ -457,21 +471,33 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
 
           {/* List */}
           <div className="flex flex-col gap-2.5 flex-1">
-            {recommendations[activeTab].map((item, i) => (
-              <button
-                key={i}
-                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left w-full group"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-800 truncate">{item.org}</p>
-                  <p className="text-[11px] text-gray-400 truncate">{item.role}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[11px] text-gray-400">{item.location}</p>
-                  <p className="text-[11px] font-medium text-brand-500">D{item.dday}</p>
-                </div>
-              </button>
-            ))}
+           {jobList.map((item: any, i: number) => (
+  <button
+    key={i}
+    onClick={() => window.open(item.srcUrl, "_blank")}
+    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
+  >
+    <div className="flex-1 min-w-0">
+      <p className="text-[13px] font-semibold text-gray-800 truncate">
+        {item.company}
+      </p>
+
+      <p className="text-[11px] text-gray-400 truncate">
+        {item.title}
+      </p>
+    </div>
+
+    <div className="text-right flex-shrink-0">
+      <p className="text-[11px] text-gray-400">
+        {item.region}
+      </p>
+
+      <p className="text-[11px] font-medium text-brand-500">
+        {item.closingDate}
+      </p>
+    </div>
+  </button>
+))}
           </div>
 
           <button className="text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors">
