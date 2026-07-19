@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import {
   MapPin,
   ArrowLeft,
-  FileSpreadsheet,
   Scale,
-  FileText,
+  Trash2,
+  AlertTriangle,
+  X,
+  Loader2,
 } from 'lucide-react';
 import type { PageKey, SiteAnalysisData } from '../types';
 import Card from '../components/Card';
@@ -24,6 +27,7 @@ interface ProjectDetailPageProps {
   date: string;
   data: SiteAnalysisData;
   onNavigate: (page: PageKey) => void;
+  onDelete: (projectName: string) => Promise<boolean>;
 }
 
 interface TableRowData {
@@ -85,6 +89,7 @@ export default function ProjectDetailPage({
   date,
   data,
   onNavigate,
+  onDelete,
 }: ProjectDetailPageProps) {
   const rows = buildTableRows(data);
   const legalBasis = findLegalBasis(data);
@@ -99,12 +104,26 @@ export default function ProjectDetailPage({
       ? data.lng
       : Number(data.lng) || 126.9780;
 
-  function handleDownloadPDF() {
-    // PDF download click event
-  }
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  function handleDownloadExcel() {
-    // Excel download click event
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const ok = await onDelete(name);
+      if (!ok) {
+        setDeleteError('프로젝트 삭제에 실패했습니다.');
+        return;
+      }
+      setShowConfirm(false);
+      onNavigate('projects');
+    } catch {
+      setDeleteError('프로젝트 삭제에 실패했습니다.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -196,20 +215,67 @@ export default function ProjectDetailPage({
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
         <Button
-          variant="secondary"
-          icon={<FileText className="w-4 h-4" />}
-          onClick={handleDownloadPDF}
+          variant="primary"
+          icon={<Trash2 className="w-4 h-4" />}
+          onClick={() => setShowConfirm(true)}
+          className="!bg-red-600 hover:!bg-red-700 active:!bg-red-800"
         >
-          PDF 다운로드
-        </Button>
-        <Button
-          variant="secondary"
-          icon={<FileSpreadsheet className="w-4 h-4" />}
-          onClick={handleDownloadExcel}
-        >
-          Excel 다운로드
+          프로젝트 삭제
         </Button>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => !deleting && setShowConfirm(false)}
+          />
+          <Card className="relative z-10 w-full max-w-md p-6 shadow-soft-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">프로젝트 삭제</h3>
+              </div>
+              <button
+                onClick={() => !deleting && setShowConfirm(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={deleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              정말 <span className="font-semibold text-gray-900">{name}</span> 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </p>
+            {deleteError && (
+              <div className="mb-4 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100">
+                <p className="text-[12px] text-red-600 font-medium">{deleteError}</p>
+              </div>
+            )}
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setShowConfirm(false)}
+                disabled={deleting}
+              >
+                취소
+              </Button>
+              <Button
+                variant="primary"
+                icon={deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                onClick={handleDelete}
+                disabled={deleting}
+                className="!bg-red-600 hover:!bg-red-700 active:!bg-red-800"
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

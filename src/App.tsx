@@ -5,7 +5,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import type { PageKey, Project, SiteAnalysisData } from './types';
-import { loadProjects, addProject, generateId } from './storage';
+import { loadProjects, addProject, deleteProject, generateId } from './storage';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import HomePage from './pages/HomePage';
@@ -68,6 +68,23 @@ function App() {
     }
   }
 
+  async function handleDeleteProject(projectName: string): Promise<boolean> {
+    try {
+      const response = await fetch('http://localhost:5678/webhook/delete_project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName }),
+      });
+      if (!response.ok) return false;
+      const updated = deleteProject(selectedProject!.id);
+      setProjects(updated);
+      setSelectedProject(null);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   const pageTitles: Record<PageKey, string> = {
     home: '',
     'site-analysis': '대지 분석',
@@ -125,6 +142,7 @@ function App() {
             date={selectedProject.date}
             data={selectedProject.analysisData as SiteAnalysisData}
             onNavigate={navigate}
+            onDelete={handleDeleteProject}
           />
         );
 
