@@ -26,7 +26,7 @@ interface SiteResultPageProps {
   address: string;
   data: SiteAnalysisData;
   onNavigate: (page: PageKey) => void;
-  onSave: () => void;
+onSave: (projectName: string) => void;
 }
 
 interface TableRowData {
@@ -37,16 +37,15 @@ interface TableRowData {
 const FIELD_LABELS: Record<string, string> = {
   "주소": "주소",
   "대지면적": "대지면적",
-  "지역": "용도지역",
+  "용도지역": "용도지역",
   "지목": "지목",
-  "pnu": "pnu",
+  "PNU": "PNU",
   "행위가능건축물": "행위가능건축물",
   "건폐율": "건폐율",
   "용적률": "용적률",
   "높이제한": "높이제한",
   "도로조건": "도로조건",
   "건축선": "건축선",
-  "대지와도로의관계": "대지와도로의관계",
   "대지안의공지": "대지안의공지",
 };
 
@@ -108,39 +107,37 @@ export default function SiteResultPage({
   const legalBasis = findLegalBasis(data);
 
 async function handleSave() {
-
   try {
+    const projectName = prompt("프로젝트 이름을 입력하세요");
 
-    await fetch("http://localhost:5678/webhook/save_project", {
+    if (!projectName) return;
+
+    const response = await fetch("http://localhost:5678/webhook/save_project", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-
-        projectName: prompt("프로젝트 이름을 입력하세요") || "새 프로젝트",
-
-        address,
-
-        analysis: data,
-
-      }),
+body: JSON.stringify({
+    projectName,
+    address,
+    analysisData: data,
+}),
     });
 
-    onSave();
+    if (!response.ok) {
+      throw new Error("저장 실패");
+    }
+
+    onSave(projectName);
 
     setSaved(true);
 
     setTimeout(() => setSaved(false), 2500);
 
   } catch (err) {
-
     console.error(err);
-
     alert("저장 실패");
-
   }
-
 }
   
   console.log("SiteResult data =", data);
@@ -243,16 +240,6 @@ const lng =
         </Card>
       )}
 
-      {/* AI Copilot Chat */}
-      <div className="mb-8">
-        <CopilotChat
-          analysis={data}
-          project={{
-            name: address,
-            address,
-          }}
-        />
-      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">

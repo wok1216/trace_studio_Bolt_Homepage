@@ -203,11 +203,6 @@ return (
         🛰 위성
       </button>
 
-      <button
-        onClick={() => setShowCadastre((prev) => !prev)}
-      >
-        📐 지적도
-       </button>
 
 
 

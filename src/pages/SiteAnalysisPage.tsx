@@ -117,35 +117,18 @@ export default function SiteAnalysisPage({
           대지 분석
         </h1>
         <p className="text-[15px] text-gray-400 leading-relaxed">
-          주소를 검색하고 선택하면 AI가 대지를 분석합니다
+          주소를 검색하면 AI가 대지를 분석합니다
         </p>
       </div>
 
       <div className="flex justify-center">
   <Card className="w-full max-w-2xl p-7 lg:p-8">
         <form onSubmit={handleStartAnalysis} className="space-y-6">
-          {/* Project Name (local only) */}
-          <div>
-            <label className="block text-[14px] font-semibold text-gray-700 mb-2">
-              프로젝트명
-            </label>
-            <input
-              required
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="프로젝트 이름을 입력하세요 (필수)"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
-            />
-            <p className="mt-2 text-[12px] text-gray-300">
-              프로젝트명은 로컬에만 저장되며 분석에 사용되지 않습니다
-            </p>
-          </div>
 
           {/* Address Search */}
           <div>
             <label className="block text-[14px] font-semibold text-gray-700 mb-2">
-              주소
+              주소 검색
             </label>
             <AddressAutocomplete
               onSelect={(addr) => setSelectedAddress(addr)}
@@ -172,7 +155,7 @@ export default function SiteAnalysisPage({
           <Button
             size="lg"
             fullWidth
-            disabled={!selectedAddress || loading || !projectName.trim()}
+            disabled={!selectedAddress || loading}
             onClick={handleStartAnalysis}
             icon={<MapPin className="w-5 h-5" />}
             className="mt-auto"

@@ -4,21 +4,10 @@ import {
   ArrowRight,
   Lightbulb,
   Briefcase,
-  Bot,
-  Sun,
-  Wind,
-  Map,
-  BarChart2,
-  Leaf,
-  HelpCircle,
-  Send,
-  BookOpen,
   Home,
-  Recycle,
   Search,
   Loader2,
   Building,
-  Lock,
   AlertCircle,
 } from 'lucide-react';
 import type { PageKey, Project, SiteAnalysisData } from '../types';
@@ -31,44 +20,8 @@ interface HomePageProps {
   onNavigate: (page: PageKey) => void;
   projects: Project[];
   onProjectClick: (project: Project) => void;
-  onAnalysisComplete: (address: string, data: SiteAnalysisData, projectName: string) => void;
+  onAnalysisComplete: (address: string, data: SiteAnalysisData) => void;
 }
-
-// ── Mock data ────────────────────────────────────────────────
-const insights = [
-  {
-    icon: BookOpen,
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
-    title: '건축법 개정 소식',
-    desc: '7월부터 다중이용시설의 피난안전 기준이 강화되었습니다.',
-  },
-  {
-    icon: Home,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-    title: '설계 사례 인사이트',
-    desc: '중정형 배치로 자연채광을 극대화한 국내외 3가지 사례',
-  },
-  {
-    icon: Recycle,
-    color: 'text-green-600',
-    bg: 'bg-green-50',
-    title: '지속가능한 건축',
-    desc: '친환경 건축자재 트렌드와 탄소중립 설계 체크리스트',
-  },
-];
-
-
-
-const chatChips = [
-  { icon: Sun, label: '채광과 자연환경' },
-  { icon: Wind, label: '동선과 공간 경험' },
-  { icon: Map, label: '지역성과 맥락' },
-  { icon: BarChart2, label: '사업성과 효율성' },
-  { icon: Leaf, label: '친환경과 지속가능성' },
-  { icon: HelpCircle, label: '아직 잘 모르겠어요' },
-];
 
 // ── Address search (Kakao) ────────────────────────────────────
 const KAKAO_API_URL = 'https://dapi.kakao.com/v2/local/search/address.json';
@@ -88,7 +41,6 @@ interface AddressSuggestion {
 
 export default function HomePage({ onNavigate, projects, onProjectClick, onAnalysisComplete }: HomePageProps) {
   // ── new-project card state ──
-  const [projectName, setProjectName] = useState('');
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
@@ -262,14 +214,15 @@ const list = Array.isArray(jobs)
 }, []);
 
   const handleStartAnalysis = async () => {
-    if (analysisLoading) {
-       return <AnalysisLoading />;
-       setAnalysisError(null);}
+
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+
     try {
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectName: projectName.trim(), address: selectedAddress }),
+        body: JSON.stringify({ address: selectedAddress }),
       });
 
       let data: SiteAnalysisData | null = null;
@@ -301,13 +254,12 @@ const list = Array.isArray(jobs)
       const result = Array.isArray(data) ? data[0] : data;
       
       console.log("Result:", result);
-      console.log(projectName);
       
       onAnalysisComplete(
         selectedAddress!,
-        result,
-        projectName.trim()
+        data
       );
+
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다');
     } finally {
@@ -330,35 +282,6 @@ if (analysisLoading) {
   return (
     <div className="animate-fade-in px-5 lg:px-8 py-8 space-y-7 max-w-[1400px]">
 
-      {/* ── Section 1: Recent Projects ── */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[18px] font-bold text-gray-900">진행 중 프로젝트</h2>
-          <button
-            onClick={() => onNavigate('projects')}
-            className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            전체 보기 <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {projects.length === 0 ? (
-          <Card className="p-10 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
-              <MapPin className="w-5 h-5 text-gray-300" />
-            </div>
-            <p className="text-[14px] font-medium text-gray-400">아직 프로젝트가 없습니다</p>
-            <p className="text-[13px] text-gray-300 mt-1">새 프로젝트를 시작해보세요</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.slice(0, 3).map((p) => (
-              <ProjectCard key={p.id} project={p} onClick={() => onProjectClick(p)} />
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* ── Section 2: Three cards ── */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
@@ -380,18 +303,6 @@ if (analysisLoading) {
   </div>
 </div>
 
-          {/* Project name */}
-          <div className="mt-0">
-            <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">프로젝트명</label>
-            <input
-              required
-              type="text"
-              value={projectName}
-              onChange={e => setProjectName(e.target.value)}
-              placeholder="프로젝트 이름을 입력하세요 (필수)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
-            />
-          </div>
 
           {/* Address search */}
           <div ref={containerRef} className="relative">
@@ -450,10 +361,11 @@ if (analysisLoading) {
           )}
 
           {/* CTA */}
+
           <Button
             size="lg"
             fullWidth
-            disabled={!selectedAddress || analysisLoading  || !projectName.trim()}
+            disabled={analysisLoading }
             onClick={handleStartAnalysis}
             icon={analysisLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             className="mt-auto"
@@ -470,7 +382,7 @@ if (analysisLoading) {
             </div>
             <div>
               <h3 className="text-[16px] font-bold text-gray-900">오늘의 건축정보</h3>
-              <p className="text-[11px] text-gray-400">공모전·행사·교육 정보를 확인하세요.</p>
+              <p className="text-[11px] text-gray-400">공모전·대외활동·교육 정보를 확인하세요.</p>
             </div>
           </div>
           
@@ -495,7 +407,7 @@ if (analysisLoading) {
       : "text-gray-400 hover:text-gray-600"
   }`}
 >
-  행사
+  대외활동
 </button>
 
 <button
@@ -607,64 +519,37 @@ if (analysisLoading) {
         </Card>
       </section>
 
-      {/* ── Section 3: AI Chat ── */}
+      {/* ── Section 1: Recent Projects ── */}
       <section>
-        <Card className="p-6">
-          <div className="flex items-center gap-1 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[18px] font-bold text-gray-900">진행 중 프로젝트</h2>
+          <button
+            onClick={() => onNavigate('projects')}
+            className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            전체 보기 <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {projects.length === 0 ? (
+          <Card className="p-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+              <MapPin className="w-5 h-5 text-gray-300" />
             </div>
-            <div>
-              <h3 className="text-[16px] font-bold text-gray-900">AI와 대화하기</h3>
-              <p className="text-[12px] text-gray-400">프로젝트를 시작하기 전에, 몇 가지 질문을 통해 당신의 방향을 이해해요.</p>
-            </div>
+            <p className="text-[14px] font-medium text-gray-400">아직 프로젝트가 없습니다</p>
+            <p className="text-[13px] text-gray-300 mt-1">새 프로젝트를 시작해보세요</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {projects.slice(0, 3).map((p) => (
+              <ProjectCard key={p.id} project={p} onClick={() => onProjectClick(p)} />
+            ))}
           </div>
-
-          {/* Chips */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {chatChips.map((chip) => {
-              const Icon = chip.icon;
-              return (
-                <button
-                  key={chip.label}
-                  onClick={() => handleChipClick(chip.label)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-[12px] font-medium transition-all ${chatInput === chip.label ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {chip.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Input */}
-          <div className="relative">
-            <textarea
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
-              rows={3}
-              placeholder={`또는, 지금 당신의 고민을 자유롭게 이야기해 주세요.\n예) 도로가 너무 좁아서 걱정돼요. 주변 맥락을 어떻게 녹일 수 있을까요?`}
-              className="w-full px-4 py-3.5 pr-14 rounded-2xl border border-gray-200 text-[13px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all resize-none leading-relaxed"
-            />
-            <button
-              onClick={handleChatSend}
-              disabled={!chatInput.trim()}
-              className="absolute right-3 bottom-3 w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              <Send className="w-4 h-4 text-white" />
-            </button>
-          </div>
-
-          {/* Privacy note */}
-          <div className="flex items-center gap-1.5 mt-3">
-            <Lock className="w-3 h-3 text-gray-300" />
-            <p className="text-[11px] text-gray-300">
-              대화 내용은 안전하게 보호되며, 당신의 설계 방향을 더 잘 이해하기 위해 활용됩니다.
-            </p>
-          </div>
-        </Card>
+        )}
       </section>
+
+
+
     </div>
   );
 }

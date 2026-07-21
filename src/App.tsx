@@ -14,6 +14,7 @@ import SiteResultPage from './pages/SiteResultPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectsPage from './pages/ProjectsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import AnalysisLoading from "./components/AnalysisLoading";
 
 function App() {
   const [page, setPage] = useState<PageKey>('home');
@@ -22,7 +23,6 @@ function App() {
   const [currentAnalysis, setCurrentAnalysis] = useState<{
     address: string;
     data: SiteAnalysisData;
-    projectName: string;
   } | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
@@ -35,16 +35,24 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function handleAnalysisComplete(address: string, data: SiteAnalysisData, projectName: string) {
-    setCurrentAnalysis({ address, data, projectName });
-    navigate('site-result');
-  }
+function handleAnalysisComplete(
+    address: string,
+    data: SiteAnalysisData,
+) {
+  setCurrentAnalysis({
+    address,
+    data,
+  });
 
-  function handleSaveProject() {
+  navigate("site-result");
+}
+
+function handleSaveProject(projectName: string) {
     if (!currentAnalysis) return;
+
     const project: Project = {
-      id: generateId(),
-      name: currentAnalysis.projectName.trim() || `대지 분석 — ${currentAnalysis.address.slice(0, 15)}`,
+  id: generateId(),
+  name: projectName,
       address: currentAnalysis.address,
       date: new Date().toLocaleDateString('ko-KR', {
         year: 'numeric',
@@ -87,10 +95,8 @@ function App() {
 
   const pageTitles: Record<PageKey, string> = {
     home: '',
+    'analysis-loading': '분석 중',
     'site-analysis': '대지 분석',
-    reference: '레퍼런스',
-    design: '시안 생성',
-    review: '설계 검토',
     projects: '프로젝트',
     'site-result': '대지 분석 결과',
     'project-detail': '프로젝트 상세',
@@ -107,6 +113,9 @@ function App() {
             onAnalysisComplete={handleAnalysisComplete}
           />
         );
+
+case "analysis-loading":
+    return <AnalysisLoading />;
 
       case 'site-analysis':
         return (
@@ -155,41 +164,6 @@ function App() {
           />
         );
 
-      case 'reference':
-        return (
-          <PlaceholderPage
-            icon={Images}
-            title="레퍼런스 추천"
-            subtitle="Pinterest / ArchDaily"
-            desc="프로젝트에 맞는 레퍼런스를 AI가 추천해드립니다"
-            actionLabel="레퍼런스 탐색"
-            onAction={() => navigate('site-analysis')}
-          />
-        );
-
-      case 'design':
-        return (
-          <PlaceholderPage
-            icon={PenTool}
-            title="시안 생성"
-            subtitle="AI 디자인 방향 + 레이아웃"
-            desc="AI가 설계 방향과 레이아웃 시안을 생성합니다"
-            actionLabel="시안 생성하기"
-            onAction={() => navigate('site-analysis')}
-          />
-        );
-
-      case 'review':
-        return (
-          <PlaceholderPage
-            icon={ClipboardCheck}
-            title="설계 검토"
-            subtitle="법규 및 체크리스트"
-            desc="관련 법규와 설계 체크리스트를 검토합니다"
-            actionLabel="설계 검토 시작"
-            onAction={() => navigate('site-analysis')}
-          />
-        );
 
       default:
         return null;

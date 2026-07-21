@@ -1,9 +1,7 @@
 export type PageKey =
   | 'home'
+  | 'analysis-loading'
   | 'site-analysis'
-  | 'reference'
-  | 'design'
-  | 'review'
   | 'projects'
   | 'site-result'
   | 'project-detail';
