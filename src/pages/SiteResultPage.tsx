@@ -26,7 +26,7 @@ interface SiteResultPageProps {
   address: string;
   data: SiteAnalysisData;
   onNavigate: (page: PageKey) => void;
-onSave: (projectName: string) => void;
+  onSave: (project: { id: string; name: string }) => void;
 }
 
 interface TableRowData {
@@ -118,17 +118,22 @@ async function handleSave() {
         "Content-Type": "application/json",
       },
 body: JSON.stringify({
-    projectName,
-    address,
-    analysisData: data,
+    project_name: projectName,
+    address: address,
+    analysisData: data
 }),
     });
+
+    const result = await response.json();
 
     if (!response.ok) {
       throw new Error("저장 실패");
     }
 
-    onSave(projectName);
+onSave({
+    id: result.projectId,
+    name: projectName
+});
 
     setSaved(true);
 

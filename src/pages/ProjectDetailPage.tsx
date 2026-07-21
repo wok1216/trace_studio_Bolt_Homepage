@@ -23,12 +23,13 @@ import VWorldMap from '../components/VWorldMap';
 import CopilotChat from '../components/CopilotChat';
 
 interface ProjectDetailPageProps {
+  id: string;
   name: string;
   address: string;
   date: string;
   data: SiteAnalysisData;
   onNavigate: (page: PageKey) => void;
-  onDelete: (projectName: string) => Promise<boolean>;
+  onDelete: (projectId: string) => Promise<boolean>;
 }
 
 interface TableRowData {
@@ -100,6 +101,7 @@ function findLegalBasis(data: SiteAnalysisData): string | null {
 console.log("적용법령 =", ["적용법령"]);
 
 export default function ProjectDetailPage({
+  id,
   name,
   address,
   date,
@@ -125,23 +127,26 @@ export default function ProjectDetailPage({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  async function handleDelete() {
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      const ok = await onDelete(name);
-      if (!ok) {
-        setDeleteError('프로젝트 삭제에 실패했습니다.');
-        return;
-      }
+async function handleDelete() {
+  setDeleting(true);
+  setDeleteError("");
+
+  try {
+    const success = await onDelete(id);
+
+    if (success) {
       setShowConfirm(false);
-      onNavigate('projects');
-    } catch {
-      setDeleteError('프로젝트 삭제에 실패했습니다.');
-    } finally {
-      setDeleting(false);
+      onNavigate("projects");
+    } else {
+      alert("프로젝트 삭제에 실패했습니다.");
     }
+  } catch (err) {
+    console.error(err);
+    alert("프로젝트 삭제에 실패했습니다.");
+  } finally {
+    setDeleting(false);
   }
+}
 
   return (
     <div className="animate-fade-in px-5 lg:px-10 py-8 lg:py-12">

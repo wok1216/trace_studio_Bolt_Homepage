@@ -5,7 +5,6 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import type { PageKey, Project, SiteAnalysisData } from './types';
-import { loadProjects, addProject, deleteProject, generateId } from './storage';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import HomePage from './pages/HomePage';
@@ -26,10 +25,6 @@ function App() {
   } | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  useEffect(() => {
-    setProjects(loadProjects());
-  }, []);
-
   function navigate(p: PageKey) {
     setPage(p);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -47,45 +42,42 @@ function handleAnalysisComplete(
   navigate("site-result");
 }
 
-function handleSaveProject(projectName: string) {
-    if (!currentAnalysis) return;
+function handleSaveProject(project: { id: string; name: string }) {
+  if (!currentAnalysis) return;
 
-    const project: Project = {
-  id: generateId(),
-  name: projectName,
-      address: currentAnalysis.address,
-      date: new Date().toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      analysisData: currentAnalysis.data,
-    };
-    const updated = addProject(project);
-    setProjects(updated);
-    setSelectedProject(project);
-    navigate('projects');
-  }
+  setSelectedProject({
+    id: project.id,
+    name: project.name,
+    address: currentAnalysis.address,
+    date: new Date().toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    analysisData: currentAnalysis.data,
+  });
+
+  navigate("project-detail");
+}
 
   function handleProjectClick(project: Project) {
     if (project.analysisData) {
-      setSelectedProject(project);
+      // setSelectedProject(project);
       navigate('project-detail');
     } else {
       navigate('site-analysis');
     }
   }
 
-  async function handleDeleteProject(projectName: string): Promise<boolean> {
+  async function handleDeleteProject(projectId: string): Promise<boolean> {
     try {
       const response = await fetch('http://localhost:5678/webhook/delete_project', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectName }),
+        body: JSON.stringify({ projectId }),
       });
       if (!response.ok) return false;
-      const updated = deleteProject(selectedProject!.id);
-      setProjects(updated);
+      setProjects(prev => prev.filter(project => project.id !== projectId));
       setSelectedProject(null);
       return true;
     } catch {
@@ -146,6 +138,7 @@ case "analysis-loading":
         }
         return (
           <ProjectDetailPage
+            id={selectedProject.id}
             name={selectedProject.name}
             address={selectedProject.address}
             date={selectedProject.date}
