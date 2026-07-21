@@ -25,6 +25,7 @@ import type { PageKey, Project, SiteAnalysisData } from '../types';
 import Card from '../components/Card';
 import ProjectCard from '../components/ProjectCard';
 import Button from '../components/Button';
+import AnalysisLoading from '../components/AnalysisLoading';
 
 interface HomePageProps {
   onNavigate: (page: PageKey) => void;
@@ -57,9 +58,6 @@ const insights = [
     desc: '친환경 건축자재 트렌드와 탄소중립 설계 체크리스트',
   },
 ];
-
-const recommendTabs = ['채용 공고', '공모전', '행사/교육'] as const;
-type RecommendTab = (typeof recommendTabs)[number];
 
 
 
@@ -106,10 +104,6 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   const [educationList, setEducationList] = useState<any[]>([]);
   const [eventList, setEventList] = useState<any[]>([]);
   const [cultureTab, setCultureTab] = useState('contest');
-  
-
-  // ── insights / recommendations state ──
-  const [activeTab, setActiveTab] = useState<RecommendTab>('채용 공고');
 
   // ── chat state ──
   const [chatInput, setChatInput] = useState('');
@@ -223,12 +217,6 @@ setContestList(result?.contests ?? []);
 setEventList(result?.events ?? []);
 setEducationList(result?.education ?? []);
 
-const data = await response.json();
-
-setContestList(data.contests ?? []);
-setEventList(data.events ?? []);
-setEducationList(data.education ?? []);
-
   } catch(err){
     console.error(err);
   }
@@ -246,14 +234,14 @@ setEducationList(data.education ?? []);
         },
       });
 
-      const data = await response.json();
+      const jobs = await response.json();
       
       console.log("response.ok =", response.ok);
-      console.log("job api =", data);
+      console.log("job api =", jobs);
       
-      const list = Array.isArray(data?.[0]?.data) ? data[0].data : [];
-
-      setHasArchitecture(data?.[0]?.hasArchitecture ?? false);
+const list = Array.isArray(jobs)
+  ? jobs
+  : [];
       
       setJobList(list);
       
@@ -274,9 +262,9 @@ setEducationList(data.education ?? []);
 }, []);
 
   const handleStartAnalysis = async () => {
-    if (!selectedAddress) return;
-    setAnalysisLoading(true);
-    setAnalysisError(null);
+    if (analysisLoading) {
+       return <AnalysisLoading />;
+       setAnalysisError(null);}
     try {
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
@@ -313,9 +301,10 @@ setEducationList(data.education ?? []);
       const result = Array.isArray(data) ? data[0] : data;
       
       console.log("Result:", result);
+      console.log(projectName);
       
       onAnalysisComplete(
-        selectedAddress,
+        selectedAddress!,
         result,
         projectName.trim()
       );
@@ -333,6 +322,10 @@ setEducationList(data.education ?? []);
   const handleChipClick = (label: string) => {
     setChatInput(label);
   };
+
+if (analysisLoading) {
+  return <AnalysisLoading />;
+}
 
   return (
     <div className="animate-fade-in px-5 lg:px-8 py-8 space-y-7 max-w-[1400px]">
@@ -372,7 +365,7 @@ setEducationList(data.education ?? []);
         {/* Card A: 대지분석 */}
         <Card className="p-6 lg:col-span-1 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center ">
               <MapPin className="w-4 h-4 text-green-600" />
             </div>
             
@@ -388,13 +381,14 @@ setEducationList(data.education ?? []);
 </div>
 
           {/* Project name */}
-          <div className="mt-6">
+          <div className="mt-0">
             <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">프로젝트명</label>
             <input
+              required
               type="text"
               value={projectName}
               onChange={e => setProjectName(e.target.value)}
-              placeholder="예) 천안 근린생활시설 신축 계획"
+              placeholder="프로젝트 이름을 입력하세요 (필수)"
               className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
             />
           </div>
@@ -405,12 +399,13 @@ setEducationList(data.education ?? []);
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
               <input
+                required
                 type="text"
                 value={query}
                 onChange={e => handleQueryChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
-                placeholder="도로명 주소 또는 지번으로 검색하세요"
+                placeholder="주소를 입력하세요 (예: 강남구 테헤란로 123)"
                 className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
               />
               {searchLoading && (
@@ -458,7 +453,7 @@ setEducationList(data.education ?? []);
           <Button
             size="lg"
             fullWidth
-            disabled={!selectedAddress || analysisLoading}
+            disabled={!selectedAddress || analysisLoading  || !projectName.trim()}
             onClick={handleStartAnalysis}
             icon={analysisLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             className="mt-auto"
@@ -481,72 +476,81 @@ setEducationList(data.education ?? []);
           
           <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100">
 
-            {(() => {
-  const cultureList =
+<button
+  onClick={() => setCultureTab("contest")}
+  className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
     cultureTab === "contest"
-      ? contestList
-      : cultureTab === "event"
-      ? eventList
-      : educationList;
+      ? "bg-white shadow-soft text-gray-900"
+      : "text-gray-400 hover:text-gray-600"
+  }`}
+>
+  공모전
+</button>
 
-  return cultureList.map((item: any, i: number) => (
-    <button
-      key={i}
-      onClick={() => window.open(item.url, "_blank")}
-      className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
-    >
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-gray-800 truncate">
-          {item.title}
-        </p>
+<button
+  onClick={() => setCultureTab("event")}
+  className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+    cultureTab === "event"
+      ? "bg-white shadow-soft text-gray-900"
+      : "text-gray-400 hover:text-gray-600"
+  }`}
+>
+  행사
+</button>
 
-        <p className="text-[11px] text-gray-400 truncate">
-          {item.period}
-        </p>
-      </div>
-    </button>
-  ));
-})()}
-            
-            <button
-            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
-              cultureTab === "contest"
-              ? "bg-white shadow-soft text-gray-900"
-              : "text-gray-400 hover:text-gray-600"
-            }`}
-            >
-              공모전
-              </button>
-              
-              <button
-              
-            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
-                cultureTab === "event"
-              ? "bg-white shadow-soft text-gray-900"
-              : "text-gray-400 hover:text-gray-600"
-           }`}
-           >
-             행사
-             </button>
+<button
+  onClick={() => setCultureTab("education")}
+  className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+    cultureTab === "education"
+      ? "bg-white shadow-soft text-gray-900"
+      : "text-gray-400 hover:text-gray-600"
+  }`}
+>
+  교육
+</button>
 
-            <button
-            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
-                cultureTab === "education"
-              ? "bg-white shadow-soft text-gray-900"
-              : "text-gray-400 hover:text-gray-600"
-           }`}
-           >
-             교육
-             </button>
-             
-             </div>
+</div>
 
+<div className="flex flex-col gap-1 mt-3">
+  {(() => {
+    const cultureList =
+      cultureTab === "contest"
+        ? contestList
+        : cultureTab === "event"
+        ? eventList
+        : educationList;
+
+    return cultureList.map((item: any, i: number) => (
+      <button
+        key={i}
+        onClick={() => window.open(item.url, "_blank")}
+        className="flex items-center gap-1 p-2 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
+      >
+<div className="flex justify-between items-start">
+  <div className="flex-1 min-w-0">
+    <p className="text-[13px] font-semibold text-gray-800 line-clamp-2">
+      {item.title}
+    </p>
+
+    <p className="text-[11px] text-gray-400 mt-1">
+      {item.period}
+    </p>
+  </div>
+
+  <span className="text-[11px] text-gray-400 whitespace-nowrap self-start ml-2">
+    {item.region}
+  </span>
+</div>
+      </button>
+    ));
+  })()}
+</div>
 
         </Card>
 
         {/* Card C: 오늘의 채용공고 */}
         <Card className="p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 -mb-2">
             <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
               <Briefcase className="w-4 h-4 text-blue-600" />
             </div>
@@ -557,7 +561,7 @@ setEducationList(data.education ?? []);
           </div>
 
           {/* List */}
-          <div className="flex flex-col gap-1 flex-1">
+          <div className="flex flex-col gap-1 flex mt-3">
             {!hasArchitecture && (
                   <div className="mb-1 rounded-lg bg-gray-50 border border-gray-100 px-3 py-1.5 flex flex-col items-center justify-center text-center">
                    <p className="text-[11px] font-medium text-gray-500">
@@ -565,41 +569,40 @@ setEducationList(data.education ?? []);
                   </p>
                    </div>
                   )}
-           {jobList.map((item: any, i: number) => (
-  <button
-    key={i}
-    onClick={() => window.open(item.srcUrl, "_blank")}
-    className="flex items-center gap-1 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
-  >
+{jobList.slice(0, 4).map((job) => (
+
+<button
+  key={job.link}
+  onClick={() => window.open(job.link, "_blank")}
+  className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors text-left w-full"
+>
     <div className="flex-1 min-w-0">
       <p className="text-[13px] font-semibold text-gray-800 truncate">
-        {item.company}
+        {job.company}
       </p>
 
       <p className="text-[11px] text-gray-400 truncate">
-        {item.title}
+        {job.career}
       </p>
     </div>
 
-    <div className="text-right flex-shrink-0">
-      <p className="text-[11px] text-gray-400">
-        {item.region}
-      </p>
-
+    <div className="text-right flex-shrink-0 pr-2">
       <p className="text-[11px] font-medium text-brand-500">
-        {item.dday}
+        {job.dday}
       </p>
     </div>
   </button>
 ))}
+
+<button
+  onClick={() => window.open("https://vmspace.com/job/job.html", "_blank")}
+  className="mt-1 ml-auto pr-3 text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
+>
+  건축 채용공고 더보기
+  <ArrowRight className="w-3 h-3" />
+</button>
+
           </div>
-          <button
-            onClick={() => window.open("https://vmspace.com/job/job.html", "_blank")}
-            className="text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
-          >
-            건축 채용공고 더보기
-            <ArrowRight className="w-3 h-3" />
-          </button>
 
         </Card>
       </section>

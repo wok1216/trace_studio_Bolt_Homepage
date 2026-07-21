@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Loader2, AlertCircle, ArrowLeft, Building2, Check } from 'lucide-react';
+import { MapPin, Loader2, AlertCircle, ArrowLeft, Building2, Check, } from 'lucide-react';
 import type { PageKey, SiteAnalysisData } from '../types';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -121,7 +121,8 @@ export default function SiteAnalysisPage({
         </p>
       </div>
 
-      <Card className="p-7 lg:p-8">
+      <div className="flex justify-center">
+  <Card className="w-full max-w-2xl p-7 lg:p-8">
         <form onSubmit={handleStartAnalysis} className="space-y-6">
           {/* Project Name (local only) */}
           <div>
@@ -129,10 +130,11 @@ export default function SiteAnalysisPage({
               프로젝트명
             </label>
             <input
+              required
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="프로젝트 이름을 입력하세요 (선택)"
+              placeholder="프로젝트 이름을 입력하세요 (필수)"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
             />
             <p className="mt-2 text-[12px] text-gray-300">
@@ -143,7 +145,7 @@ export default function SiteAnalysisPage({
           {/* Address Search */}
           <div>
             <label className="block text-[14px] font-semibold text-gray-700 mb-2">
-              주소 <span className="text-brand-500">*</span>
+              주소
             </label>
             <AddressAutocomplete
               onSelect={(addr) => setSelectedAddress(addr)}
@@ -168,16 +170,18 @@ export default function SiteAnalysisPage({
 
           {/* Submit */}
           <Button
-            type="submit"
             size="lg"
             fullWidth
-            disabled={!selectedAddress}
+            disabled={!selectedAddress || loading || !projectName.trim()}
+            onClick={handleStartAnalysis}
             icon={<MapPin className="w-5 h-5" />}
+            className="mt-auto"
           >
-            대지 분석 시작
+            {loading ? '분석 중...' : '대지 분석 시작'}
           </Button>
         </form>
       </Card>
+    </div>
     </div>
   );
 }

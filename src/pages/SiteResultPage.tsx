@@ -34,37 +34,47 @@ interface TableRowData {
 }
 
 const FIELD_LABELS: Record<string, string> = {
-  address: "주소",
-  land_area: "대지면적",
-  base_use_zone: "용도지역",
-  land_category: "지목",
-  pnu: "PNU",
-  allowed_use: "허용용도",
-  building_coverage_ratio: "건폐율",
-  floor_area_ratio: "용적률",
-  max_height: "최고높이",
-  road_condition: "도로조건",
-  parking_standard: "주차장설치기",
-  public_open_space: "공개공지",
-  landscaping: "조경",
-  setback: "건축선 후퇴",
+  "주소": "주소",
+  "대지면적": "대지면적",
+  "지역": "용도지역",
+  "지목": "지목",
+  "pnu": "pnu",
+  "행위가능건축물": "행위가능건축물",
+  "건폐율": "건폐율",
+  "용적률": "용적률",
+  "높이제한": "높이제한",
+  "도로조건": "도로조건",
+  "건축선": "건축선",
+  "대지와도로의관계": "대지와도로의관계",
+  "대지안의공지": "대지안의공지",
 };
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
 
-const ARRAY_FIELDS = new Set(['allowed_use', 'applied_law']);
+const ARRAY_FIELDS = new Set([    "행위가능건축물",
+    "적용법령"]);
 
 function findValue(data: SiteAnalysisData, key: string): string {
+
   const value = data[key as keyof SiteAnalysisData];
 
   if (value === undefined) return "확인 필요";
   if (value === null) return "";
 
-  if (ARRAY_FIELDS.has(key) && Array.isArray(value)) {
-    return value.length > 0 ? value.join(", ") : "확인 필요";
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+
+  if (typeof value === "object") {
+
+    return Object.values(value)
+      .filter(Boolean)
+      .join(", ");
+
   }
 
   return String(value);
+
 }
 
 function buildTableRows(data: SiteAnalysisData): TableRowData[] {
@@ -83,6 +93,8 @@ function findLegalBasis(data: SiteAnalysisData): string | null {
   if (val === null || val === "") return null;
   return String(val);
 }
+
+console.log("적용법령 =", ["적용법령"]);
 
 export default function SiteResultPage({
   address,
@@ -131,6 +143,7 @@ async function handleSave() {
 }
   
   console.log("SiteResult data =", data);
+  console.log(Object.keys(data));   // 추가
   console.log("lat =", data.lat);
   console.log("lng =", data.lng);
   

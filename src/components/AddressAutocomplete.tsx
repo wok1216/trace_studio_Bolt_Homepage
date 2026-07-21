@@ -174,6 +174,7 @@ export default function AddressAutocomplete({
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-300" />
             <input
+              required
               type="text"
               value={query}
               onChange={(e) => handleInputChange(e.target.value)}
