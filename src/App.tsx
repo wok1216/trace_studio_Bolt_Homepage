@@ -19,11 +19,54 @@ function App() {
   const [page, setPage] = useState<PageKey>('home');
   const [projects, setProjects] = useState<Project[]>([]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [currentAnalysis, setCurrentAnalysis] = useState<{
     address: string;
     data: SiteAnalysisData;
   } | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+  loadProjects();
+}, []);
+
+async function loadProjects() {
+    try {
+      const response = await fetch('http://localhost:5678/webhook/get_projects');
+      if (!response.ok) return;
+
+      // 1. 응답 텍스트를 받아 비어있는지 안전하게 검사
+      const text = await response.text();
+      if (!text) {
+        setProjects([]);
+        return;
+      }
+
+      // 2. JSON 파싱
+      const result = JSON.parse(text);
+      console.log(result);
+
+      // 3. 기존 데이터 매핑 로직 유지
+      const projectsArray = result.projects ?? (Array.isArray(result) ? result : []);
+
+      setProjects(
+        projectsArray.map((p: any) => ({
+          id: p.id,
+          name: p.project_name || p.name,
+          address: p.address,
+          date: p.created_at || p.date,
+          analysisData: {
+            ...p,
+          },
+        }))
+      );
+    } catch (err) {
+      console.error("프로젝트 목록 로드 오류:", err);
+    }
+  }
+
+useEffect(() => {
+  loadProjects();
+}, []);
 
   function navigate(p: PageKey) {
     setPage(p);
@@ -42,7 +85,7 @@ function handleAnalysisComplete(
   navigate("site-result");
 }
 
-function handleSaveProject(project: { id: string; name: string }) {
+async function handleSaveProject(project: { id: string; name: string }) {
   if (!currentAnalysis) return;
 
   setSelectedProject({
@@ -57,17 +100,25 @@ function handleSaveProject(project: { id: string; name: string }) {
     analysisData: currentAnalysis.data,
   });
 
+  setProjects(prev => [
+  {
+    id: project.id,
+    name: project.name,
+    address: currentAnalysis.address,
+    date: new Date().toLocaleDateString("ko-KR"),
+    analysisData: currentAnalysis.data,
+  },
+  ...prev,
+]);
+
+
   navigate("project-detail");
 }
 
-  function handleProjectClick(project: Project) {
-    if (project.analysisData) {
-      // setSelectedProject(project);
-      navigate('project-detail');
-    } else {
-      navigate('site-analysis');
-    }
-  }
+async function handleProjectClick(project: Project) {
+   setSelectedProject(project);
+   navigate("project-detail");
+}
 
   async function handleDeleteProject(projectId: string): Promise<boolean> {
     try {
@@ -78,6 +129,7 @@ function handleSaveProject(project: { id: string; name: string }) {
       });
       if (!response.ok) return false;
       setProjects(prev => prev.filter(project => project.id !== projectId));
+      await loadProjects();
       setSelectedProject(null);
       return true;
     } catch {

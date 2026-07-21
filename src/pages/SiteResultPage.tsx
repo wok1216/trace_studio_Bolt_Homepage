@@ -112,6 +112,10 @@ async function handleSave() {
 
     if (!projectName) return;
 
+    console.log("3. fetch 직전");
+
+    if (!projectName) return;
+
     const response = await fetch("http://localhost:5678/webhook/save_project", {
       method: "POST",
       headers: {
