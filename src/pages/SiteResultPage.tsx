@@ -20,6 +20,7 @@ import {
   TableCell,
 } from '../components/ui/table';
 import VWorldMap from '../components/VWorldMap';
+import CopilotChat from '../components/CopilotChat';
 
 interface SiteResultPageProps {
   address: string;
@@ -241,6 +242,17 @@ const lng =
           </Table>
         </Card>
       )}
+
+      {/* AI Copilot Chat */}
+      <div className="mb-8">
+        <CopilotChat
+          analysis={data}
+          project={{
+            name: address,
+            address,
+          }}
+        />
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">

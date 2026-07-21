@@ -20,6 +20,7 @@ import {
   TableCell,
 } from '../components/ui/table';
 import VWorldMap from '../components/VWorldMap';
+import CopilotChat from '../components/CopilotChat';
 
 interface ProjectDetailPageProps {
   name: string;
@@ -228,6 +229,18 @@ export default function ProjectDetailPage({
           </Table>
         </Card>
       )}
+
+      {/* AI Copilot Chat */}
+      <div className="mb-8">
+        <CopilotChat
+          analysis={data}
+          project={{
+            name,
+            address,
+            date,
+          }}
+        />
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
