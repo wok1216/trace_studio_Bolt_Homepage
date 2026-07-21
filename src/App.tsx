@@ -116,8 +116,36 @@ async function handleSaveProject(project: { id: string; name: string }) {
 }
 
 async function handleProjectClick(project: Project) {
-   setSelectedProject(project);
-   navigate("project-detail");
+  try {
+    const response = await fetch('http://localhost:5678/webhook/get_project', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: project.id }),
+    });
+
+    if (response.ok) {
+      const text = await response.text();
+      if (text) {
+        const data = JSON.parse(text);
+        const projectData = Array.isArray(data) ? data[0] : data;
+        setSelectedProject({
+          id: projectData.id || project.id,
+          name: projectData.project_name || projectData.name || project.name,
+          address: projectData.address || project.address,
+          date: projectData.created_at || projectData.date || project.date,
+          analysisData: projectData,
+        });
+      } else {
+        setSelectedProject(project);
+      }
+    } else {
+      setSelectedProject(project);
+    }
+  } catch (err) {
+    console.error('프로젝트 조회 오류:', err);
+    setSelectedProject(project);
+  }
+  navigate('project-detail');
 }
 
   async function handleDeleteProject(projectId: string): Promise<boolean> {
