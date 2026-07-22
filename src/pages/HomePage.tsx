@@ -374,14 +374,14 @@ if (analysisLoading) {
           </Button>
         </Card>
 
-        {/* Card B: 오늘의 건축정보 */}
+        {/* Card B: 오늘의 정보 */}
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center">
               <Lightbulb className="w-4 h-4 text-yellow-500" />
             </div>
             <div>
-              <h3 className="text-[16px] font-bold text-gray-900">오늘의 건축정보</h3>
+              <h3 className="text-[16px] font-bold text-gray-900">오늘의 정보</h3>
               <p className="text-[11px] text-gray-400">공모전·대외활동·교육 정보를 확인하세요.</p>
             </div>
           </div>
