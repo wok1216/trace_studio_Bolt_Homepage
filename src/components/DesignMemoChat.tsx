@@ -3,26 +3,25 @@ import { Bot, Send, Loader2, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Card from './Card';
-import type { Project, SiteAnalysisData } from '../types';
+import type { SiteAnalysisData } from '../types';
 import {
   loadChatHistory,
   saveChatHistory,
   type ProjectChatMessage,
 } from '../storage';
+import { sendDesignMemoMessage } from '../lib/designMemoChatApi';
 
-interface CopilotChatProps {
+interface DesignMemoChatProps {
+  projectId: string;
   analysis: SiteAnalysisData;
-  project: Project;
+  designNote: string;
   className?: string;
 }
 
-const CHAT_API_URL =
-  'http://localhost:5678/webhook/65e3f769-7555-4ace-a110-c4f114e0cfb3/chat';
-
 const PLACEHOLDER_EXAMPLES = [
-  '이 대지의 장단점을 알려줘',
-  '일조 문제는 없을까?',
-  '어떤 건물이 적합할까?',
+  '설계 의도를 검토해줘',
+  '이 메모 기준으로 리스크는?',
+  '변경 사항을 정리해줘',
 ];
 
 const ANSWER_FIELDS = ['output', 'answer', 'response', 'text', 'message', 'content'] as const;
@@ -77,23 +76,34 @@ function parseChatResponseBody(responseText: string): string | null {
   }
 }
 
-export default function CopilotChat({ analysis, project, className = '' }: CopilotChatProps) {
+function getDesignMemoHistoryKey(projectId: string): string {
+  return `${projectId}_design_memo`;
+}
+
+export default function DesignMemoChat({
+  projectId,
+  analysis,
+  designNote,
+  className = '',
+}: DesignMemoChatProps) {
+  const historyKey = getDesignMemoHistoryKey(projectId);
+
   const [messages, setMessages] = useState<ProjectChatMessage[]>(() =>
-    loadChatHistory(project.id),
+    loadChatHistory(historyKey),
   );
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const projectIdRef = useRef(project.id);
-  projectIdRef.current = project.id;
+  const historyKeyRef = useRef(historyKey);
+  historyKeyRef.current = historyKey;
 
   useEffect(() => {
-    setMessages(loadChatHistory(project.id));
-  }, [project.id]);
+    setMessages(loadChatHistory(historyKey));
+  }, [historyKey]);
 
   useEffect(() => {
-    saveChatHistory(projectIdRef.current, messages);
+    saveChatHistory(historyKeyRef.current, messages);
   }, [messages]);
 
   const scrollToBottom = useCallback(() => {
@@ -107,86 +117,88 @@ export default function CopilotChat({ analysis, project, className = '' }: Copil
     scrollToBottom();
   }, [messages, loading, scrollToBottom]);
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || loading) return;
+  const sendMessage = useCallback(
+    async (messageText?: string) => {
+      const text = (messageText ?? input).trim();
+      console.log('[DesignMemoChat] sendMessage called', { text, loading, projectId });
 
-    const userMsg: ProjectChatMessage = { role: 'user', content: text };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput('');
-    setLoading(true);
-
-    const fallbackAnswer = '죄송합니다. 응답을 받지 못했습니다.';
-
-    try {
-      const payload = {
-        message: text,
-        analysis,
-        project,
-        projectId: project.id,
-      };
-
-      const response = await fetch(CHAT_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const responseText = await response.text();
-
-      if (import.meta.env.DEV) {
-        console.log('[CopilotChat] request:', payload);
-        console.log('[CopilotChat] status:', response.status);
-        console.log('[CopilotChat] raw body:', responseText);
+      if (!text) {
+        console.warn('[DesignMemoChat] aborted: empty message');
+        return;
+      }
+      if (loading) {
+        console.warn('[DesignMemoChat] aborted: already loading');
+        return;
       }
 
-      let answer = fallbackAnswer;
+      const userMsg: ProjectChatMessage = { role: 'user', content: text };
+      setMessages((prev) => [...prev, userMsg]);
+      if (messageText === undefined) {
+        setInput('');
+      }
+      setLoading(true);
 
-      if (response.ok) {
-        const parsed = parseChatResponseBody(responseText);
-        if (import.meta.env.DEV) {
-          console.log('[CopilotChat] parsed answer:', parsed);
+      const fallbackAnswer = '죄송합니다. 응답을 받지 못했습니다.';
+
+      try {
+        console.log('[DesignMemoChat] analysis field count:', Object.keys(analysis).length);
+        const payload = {
+          projectId,
+          message: text,
+          designNote,
+          analysis,
+        };
+
+        console.log('[DesignMemoChat] calling fetch via sendDesignMemoMessage');
+        const response = await sendDesignMemoMessage(payload);
+        const responseText = await response.text();
+
+        console.log('[DesignMemoChat] response status:', response.status);
+        console.log('[DesignMemoChat] response body:', responseText);
+
+        let answer = fallbackAnswer;
+
+        if (response.ok) {
+          answer = parseChatResponseBody(responseText) ?? fallbackAnswer;
+        } else {
+          answer = parseChatResponseBody(responseText) ?? `요청 실패 (${response.status})`;
         }
-        answer = parsed ?? fallbackAnswer;
-      } else {
-        const parsed = parseChatResponseBody(responseText);
-        answer = parsed ?? `요청 실패 (${response.status})`;
-        if (import.meta.env.DEV) {
-          console.error('[CopilotChat] HTTP error:', response.status, responseText);
-        }
-      }
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: answer }]);
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('[CopilotChat] fetch error:', err);
+        setMessages((prev) => [...prev, { role: 'assistant', content: answer }]);
+      } catch (err) {
+        console.error('[DesignMemoChat] fetch error:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content:
+              err instanceof Error
+                ? `오류가 발생했습니다: ${err.message}`
+                : '오류가 발생했습니다.',
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        requestAnimationFrame(() => textareaRef.current?.focus());
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content:
-            err instanceof Error
-              ? `오류가 발생했습니다: ${err.message}`
-              : '오류가 발생했습니다.',
-        },
-      ]);
-    } finally {
-      setLoading(false);
-      requestAnimationFrame(() => textareaRef.current?.focus());
-    }
+    },
+    [input, loading, projectId, designNote, analysis],
+  );
+
+  function handleSend() {
+    console.log('[DesignMemoChat] handleSend (button click)');
+    void sendMessage();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.nativeEvent.isComposing || e.key !== 'Enter' || e.shiftKey) return;
+    e.preventDefault();
+    console.log('[DesignMemoChat] handleKeyDown (Enter)');
+    void sendMessage();
   }
 
   return (
-    <Card className={`p-6 lg:p-8 shadow-soft-lg flex flex-col ${className}`.trim()}>
-      {/* Header */}
+    <Card className={`p-6 lg:p-8 shadow-soft-lg flex flex-col h-full ${className}`.trim()}>
       <div className="flex items-center gap-3 mb-1">
         <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center flex-shrink-0">
           <Bot className="w-5 h-5 text-white" />
@@ -194,12 +206,11 @@ export default function CopilotChat({ analysis, project, className = '' }: Copil
         <div>
           <h2 className="text-xl font-bold text-gray-900">AI 건축 코파일럿</h2>
           <p className="text-[13px] text-gray-400">
-            대지 분석 결과를 기반으로 궁금한 내용을 질문해보세요.
+            설계 메모를 기반으로 궁금한 내용을 질문해보세요.
           </p>
         </div>
       </div>
 
-      {/* Chat history */}
       <div
         ref={scrollRef}
         className="flex-1 min-h-[320px] max-h-[520px] overflow-y-auto mt-5 space-y-4 pr-1"
@@ -210,16 +221,20 @@ export default function CopilotChat({ analysis, project, className = '' }: Copil
               <Bot className="w-7 h-7 text-gray-300" strokeWidth={1.8} />
             </div>
             <p className="text-[14px] font-medium text-gray-400 mb-1">
-              코파일럿과 대화를 시작해보세요
+              설계 메모 코파일럿과 대화를 시작해보세요
             </p>
             <p className="text-[12px] text-gray-300">
-              대지 분석 결과를 바탕으로 답변해드릴게요
+              작성한 설계 메모를 바탕으로 답변해드릴게요
             </p>
             <div className="mt-5 flex flex-col gap-2 w-full max-w-xs">
               {PLACEHOLDER_EXAMPLES.map((ex) => (
                 <button
                   key={ex}
-                  onClick={() => setInput(ex)}
+                  type="button"
+                  onClick={() => {
+                    console.log('[DesignMemoChat] placeholder click:', ex);
+                    void sendMessage(ex);
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 transition-all text-left"
                 >
                   {ex}
@@ -240,9 +255,7 @@ export default function CopilotChat({ analysis, project, className = '' }: Copil
             >
               <div
                 className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                  isUser
-                    ? 'bg-brand-100'
-                    : 'bg-gray-900'
+                  isUser ? 'bg-brand-100' : 'bg-gray-900'
                 }`}
               >
                 {isUser ? (
@@ -297,7 +310,6 @@ export default function CopilotChat({ analysis, project, className = '' }: Copil
         )}
       </div>
 
-      {/* Input */}
       <div className="mt-5 relative">
         <textarea
           ref={textareaRef}
@@ -305,13 +317,14 @@ export default function CopilotChat({ analysis, project, className = '' }: Copil
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={2}
-          placeholder="예) 이 대지의 장단점을 알려줘"
+          placeholder="예) 설계 의도를 검토해줘"
           className="w-full pl-4 pr-14 py-3.5 rounded-2xl border border-gray-200 text-[14px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all resize-none leading-relaxed"
         />
         <button
+          type="button"
           onClick={handleSend}
           disabled={!input.trim() || loading}
-          className="absolute right-3 bottom-3 w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="absolute right-3 bottom-3 z-10 w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           {loading ? (
             <Loader2 className="w-4 h-4 text-white animate-spin" />

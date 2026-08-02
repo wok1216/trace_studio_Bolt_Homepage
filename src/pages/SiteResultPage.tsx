@@ -20,7 +20,9 @@ import {
   TableCell,
 } from '../components/ui/table';
 import VWorldMap from '../components/VWorldMap';
-import CopilotChat from '../components/CopilotChat';
+import { findLegalBasis } from '../lib/siteAnalysis';
+import { resolveProjectAnalysisData } from '../lib/projectAnalysisData';
+import RiskScore from '../components/RiskScore';
 
 interface SiteResultPageProps {
   address: string;
@@ -51,8 +53,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
 
-const ARRAY_FIELDS = new Set([    "행위가능건축물",
-    "적용법령"]);
+const ARRAY_FIELDS = new Set(['행위가능건축물', '적용법령']);
 
 function findValue(data: SiteAnalysisData, key: string): string {
 
@@ -84,18 +85,6 @@ function buildTableRows(data: SiteAnalysisData): TableRowData[] {
   }));
 }
 
-function findLegalBasis(data: SiteAnalysisData): string | null {
-  const val = data['applied_law' as keyof SiteAnalysisData];
-  if (val === undefined) return null;
-  if (Array.isArray(val)) {
-    return val.length > 0 ? val.join(", ") : null;
-  }
-  if (val === null || val === "") return null;
-  return String(val);
-}
-
-console.log("적용법령 =", ["적용법령"]);
-
 export default function SiteResultPage({
   address,
   data,
@@ -103,8 +92,9 @@ export default function SiteResultPage({
   onSave,
 }: SiteResultPageProps) {
   const [saved, setSaved] = useState(false);
-  const rows = buildTableRows(data);
-  const legalBasis = findLegalBasis(data);
+  const analysisData = resolveProjectAnalysisData(data, address);
+  const rows = buildTableRows(analysisData);
+  const legalBasis = findLegalBasis(analysisData);
 
 async function handleSave() {
   try {
@@ -124,7 +114,7 @@ async function handleSave() {
 body: JSON.stringify({
     project_name: projectName,
     address: address,
-    analysisData: data
+    analysisData: analysisData
 }),
     });
 
@@ -149,20 +139,27 @@ onSave({
   }
 }
   
-  console.log("SiteResult data =", data);
-  console.log(Object.keys(data));   // 추가
-  console.log("lat =", data.lat);
-  console.log("lng =", data.lng);
+  console.log("SiteResult data (raw) =", data);
+  console.log("SiteResult data (normalized) =", analysisData);
+  console.log(Object.keys(analysisData));
+  console.log("lat =", analysisData.lat);
+  console.log("lng =", analysisData.lng);
   
 const lat =
-  typeof data.lat === "number"
-    ? data.lat
-    : Number(data.lat) || 37.5665;
+  typeof analysisData.lat === "number"
+    ? analysisData.lat
+    : Number(analysisData.lat) || 37.5665;
 
 const lng =
-  typeof data.lng === "number"
-    ? data.lng
-    : Number(data.lng) || 126.9780;
+  typeof analysisData.lng === "number"
+    ? analysisData.lng
+    : Number(analysisData.lng) || 126.9780;
+
+const pnuValue = analysisData.PNU ?? analysisData.pnu;
+const pnu =
+  pnuValue !== undefined && pnuValue !== null && String(pnuValue).trim()
+    ? String(pnuValue).trim()
+    : undefined;
 
   return (
     <div className="animate-fade-in px-5 lg:px-10 py-8 lg:py-12">
@@ -190,10 +187,20 @@ const lng =
         </div>
       </div>
 
-      {/* Table + Map side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Analysis Table */}
-        <Card className="p-6 lg:p-8 shadow-soft-lg">
+      {/* Map + Table side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
+        {/* Map (left on desktop) */}
+        {address && (
+          <Card className="p-6 lg:p-8 shadow-soft-lg flex flex-col h-full">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">위치 지도</h2>
+            <div className="flex-1 min-h-0 flex flex-col">
+              <VWorldMap lat={lat} lng={lng} pnu={pnu} className="flex-1" />
+            </div>
+          </Card>
+        )}
+
+        {/* Analysis Table (right on desktop) */}
+        <Card className="p-6 lg:p-8 shadow-soft-lg h-full">
           <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
           <Table>
             <TableHeader>
@@ -214,15 +221,12 @@ const lng =
             </TableBody>
           </Table>
         </Card>
-
-        {/* Static Map */}
-        {address && (
-          <Card className="p-6 lg:p-8 shadow-soft-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-            <VWorldMap lat={lat} lng={lng} />
-          </Card>
-        )}
       </div>
+
+      <div className="mb-8">
+        <RiskScore data={analysisData} />
+      </div>
+
       {/* Legal Basis */}
       {legalBasis && (
         <Card className="p-6 lg:p-8 mb-8 shadow-soft-lg">

@@ -5,6 +5,12 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import type { PageKey, Project, SiteAnalysisData } from './types';
+import {
+  loadProjects as loadProjectsFromStorage,
+  saveProjects as saveProjectsToStorage,
+  deleteChatHistory,
+  deleteDesignNote,
+} from './storage';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import HomePage from './pages/HomePage';
@@ -14,6 +20,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectsPage from './pages/ProjectsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import AnalysisLoading from "./components/AnalysisLoading";
+import { resolveProjectAnalysisData } from './lib/projectAnalysisData';
 
 function App() {
   const [page, setPage] = useState<PageKey>('home');
@@ -25,48 +32,67 @@ function App() {
     data: SiteAnalysisData;
   } | null>(null);
 
-  useEffect(() => {
-  loadProjects();
-}, []);
+  function normalizeProjects(projects: Project[]): Project[] {
+    return projects.map((project) => ({
+      ...project,
+      analysisData: resolveProjectAnalysisData(project.analysisData, project.address),
+    }));
+  }
 
-async function loadProjects() {
+  function mapApiProjects(rawList: unknown[]): Project[] {
+    return rawList
+      .map((item: any) => {
+        const p = item?.json ?? item;
+        return {
+          id: String(p?.id ?? p?.project_id ?? ''),
+          name: p?.project_name || p?.name || '이름 없음',
+          address: p?.address || '',
+          date: p?.created_at || p?.date || '',
+          designNote: p?.design_note || p?.designNote || '',
+          analysisData: resolveProjectAnalysisData(p as SiteAnalysisData, p?.address || ''),
+        };
+      })
+      .filter((p) => p.id);
+  }
+
+  async function loadProjects() {
     try {
       const response = await fetch('http://localhost:5678/webhook/get_projects');
-      if (!response.ok) return;
-
-      // 1. 응답 텍스트를 받아 비어있는지 안전하게 검사
-      const text = await response.text();
-      if (!text) {
-        setProjects([]);
+      if (!response.ok) {
+        setProjects(normalizeProjects(loadProjectsFromStorage()));
         return;
       }
 
-      // 2. JSON 파싱
+      const text = await response.text();
+      if (!text) {
+        console.warn('[get_projects] API 응답이 비어 있습니다. localStorage 캐시를 사용합니다.');
+        setProjects(normalizeProjects(loadProjectsFromStorage()));
+        return;
+      }
+
       const result = JSON.parse(text);
-      console.log(result);
+      const rawList =
+        result.projects ??
+        result.data ??
+        (Array.isArray(result) ? result : []);
 
-      // 3. 기존 데이터 매핑 로직 유지
-      const projectsArray = result.projects ?? (Array.isArray(result) ? result : []);
+      const mapped = mapApiProjects(rawList);
+      if (mapped.length > 0) {
+        setProjects(mapped);
+        saveProjectsToStorage(mapped);
+        return;
+      }
 
-      setProjects(
-        projectsArray.map((p: any) => ({
-          id: p.id,
-          name: p.project_name || p.name,
-          address: p.address,
-          date: p.created_at || p.date,
-          analysisData: {
-            ...p,
-          },
-        }))
-      );
+      setProjects(normalizeProjects(loadProjectsFromStorage()));
     } catch (err) {
-      console.error("프로젝트 목록 로드 오류:", err);
+      console.error('프로젝트 목록 로드 오류:', err);
+      setProjects(normalizeProjects(loadProjectsFromStorage()));
     }
   }
 
-useEffect(() => {
-  loadProjects();
-}, []);
+  useEffect(() => {
+    loadProjects();
+  }, []);
 
   function navigate(p: PageKey) {
     setPage(p);
@@ -88,31 +114,26 @@ function handleAnalysisComplete(
 async function handleSaveProject(project: { id: string; name: string }) {
   if (!currentAnalysis) return;
 
-  setSelectedProject({
+  const newProject: Project = {
     id: project.id,
     name: project.name,
     address: currentAnalysis.address,
-    date: new Date().toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    date: new Date().toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     }),
     analysisData: currentAnalysis.data,
+  };
+
+  setSelectedProject(newProject);
+  setProjects((prev) => {
+    const updated = [newProject, ...prev];
+    saveProjectsToStorage(updated);
+    return updated;
   });
 
-  setProjects(prev => [
-  {
-    id: project.id,
-    name: project.name,
-    address: currentAnalysis.address,
-    date: new Date().toLocaleDateString("ko-KR"),
-    analysisData: currentAnalysis.data,
-  },
-  ...prev,
-]);
-
-
-  navigate("project-detail");
+  navigate('project-detail');
 }
 
 async function handleProjectClick(project: Project) {
@@ -151,13 +172,19 @@ async function handleProjectClick(project: Project) {
   async function handleDeleteProject(projectId: string): Promise<boolean> {
     try {
       const response = await fetch('http://localhost:5678/webhook/delete_project', {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId }),
       });
       if (!response.ok) return false;
-      setProjects(prev => prev.filter(project => project.id !== projectId));
-      await loadProjects();
+      setProjects((prev) => {
+        const updated = prev.filter((project) => project.id !== projectId);
+        saveProjectsToStorage(updated);
+        return updated;
+      });
+      deleteChatHistory(projectId);
+      deleteChatHistory(`${projectId}_design_memo`);
+      deleteDesignNote(projectId);
       setSelectedProject(null);
       return true;
     } catch {
@@ -222,7 +249,11 @@ case "analysis-loading":
             name={selectedProject.name}
             address={selectedProject.address}
             date={selectedProject.date}
-            data={selectedProject.analysisData as SiteAnalysisData}
+            data={resolveProjectAnalysisData(
+              selectedProject.analysisData as SiteAnalysisData,
+              selectedProject.address,
+            )}
+            initialDesignNote={selectedProject.designNote}
             onNavigate={navigate}
             onDelete={handleDeleteProject}
           />

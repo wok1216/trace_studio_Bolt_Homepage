@@ -9,16 +9,18 @@ import Point from 'ol/geom/Point';
 import Icon from 'ol/style/Icon';
 import Style from 'ol/style/Style';
 import XYZ from 'ol/source/XYZ';
-import TileWMS from 'ol/source/TileWMS';
 import { fromLonLat } from 'ol/proj';
 import 'ol/ol.css';
 
 export interface VWorldMapProps {
   lat: number;
   lng: number;
+  pnu?: string;
+  className?: string;
 }
 
-const VWORLD_API_KEY = '5CF463C1-1C14-3719-B19B-E20276B30F7D';
+const VWORLD_API_KEY =
+  import.meta.env.VITE_VWORLD_API_KEY ?? import.meta.env.VITE_VWORLD_KEY ?? '';
 
 const MARKER_ICON_URL =
   'data:image/svg+xml;utf8,' +
@@ -29,111 +31,63 @@ const MARKER_ICON_URL =
       '</svg>',
   );
 
-type BaseMapType = 'graphic' | 'satellite' | 'hybrid';
+type MapMode = 'graphic' | 'satellite';
 
-function createVWorldBaseLayer(type: BaseMapType): TileLayer<XYZ> {
-  const layerType =
-    type === "graphic"
-      ? "Base"
-      : type === "satellite"
-      ? "Satellite"
-      : "Hybrid";
-
-  const extension =
-    type === "satellite" ? "jpeg" : "png";
-
-  return new TileLayer({
-    source: new XYZ({
-      url: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_API_KEY}/${layerType}/{z}/{y}/{x}.${extension}`,
-      attributions: "© VWorld",
-      crossOrigin: "anonymous",
-      maxZoom: 19,
-      minZoom: 5,
-    }),
-  });
+function getVWorldWmtsUrl(apiKey: string, mode: MapMode): string {
+  const layer = mode === 'satellite' ? 'Satellite' : 'Base';
+  const ext = mode === 'satellite' ? 'jpeg' : 'png';
+  return `https://api.vworld.kr/req/wmts/1.0.0/${apiKey}/${layer}/{z}/{y}/{x}.${ext}`;
 }
 
-function createCadastreLayer() {
-  return new TileLayer({
-    visible: false,
+export default function VWorldMap({ lat, lng, className = '' }: VWorldMapProps) {
+  const [mapMode, setMapMode] = useState<MapMode>('graphic');
 
-    source: new TileWMS({
-      url: "https://api.vworld.kr/req/wms",
-
-      params: {
-        SERVICE: "WMS",
-        REQUEST: "GetMap",
-        VERSION: "1.3.0",
-
-        LAYERS: "lp_pa_cbnd_bonbun,lp_pa_cbnd_bubun",
-
-        STYLES: "lp_pa_cbnd_bonbun_line,lp_pa_cbnd_bubun_line",
-
-        CRS: "EPSG:900913",
-
-        FORMAT: "image/png",
-
-        TRANSPARENT: true,
-
-        KEY: VWORLD_API_KEY,
-      },
-
-      crossOrigin: "anonymous",
-    }),
-  });
-}
-
-export default function VWorldMap({ lat, lng }: VWorldMapProps) {
-const [mapType, setMapType] = useState<'graphic' | 'satellite'>('graphic');
-const [showCadastre, setShowCadastre] = useState(false);
-  console.log("VWorldMap lat =", lat);
-  console.log("VWorldMap lng =", lng);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
-  const baseLayerRef = useRef<TileLayer<XYZ> | null>(null);
-  const cadastreLayerRef = useRef<TileLayer | null>(null);
+  const baseSourceRef = useRef<XYZ | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
 
-  // Initialize map once
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !VWORLD_API_KEY) return;
 
     const markerSource = new VectorSource();
-    const markerLayer = new VectorLayer({ source: markerSource });
+    const baseSource = new XYZ({
+      url: getVWorldWmtsUrl(VWORLD_API_KEY, 'graphic'),
+      crossOrigin: 'anonymous',
+      maxZoom: 19,
+      minZoom: 5,
+      attributions: '© VWorld',
+    });
 
-const baseLayer = createVWorldBaseLayer(mapType);
-const cadastreLayer = createCadastreLayer();
+    const baseLayer = new TileLayer({ source: baseSource, zIndex: 0 });
+    const markerLayer = new VectorLayer({ source: markerSource, zIndex: 1 });
 
-const map = new Map({
-  target: containerRef.current,
-
-  layers: [
-    baseLayer,
-    cadastreLayer,
-    markerLayer
-  ],
-
+    const map = new Map({
+      target: containerRef.current,
+      layers: [baseLayer, markerLayer],
       view: new View({
         center: fromLonLat([lng, lat]),
-        zoom: 17,
+        zoom: 18,
         maxZoom: 19,
         minZoom: 5,
       }),
+      controls: [],
     });
 
-mapRef.current = map;
-baseLayerRef.current = baseLayer;
-cadastreLayerRef.current = cadastreLayer;
-markerSourceRef.current = markerSource;
+    mapRef.current = map;
+    baseSourceRef.current = baseSource;
+    markerSourceRef.current = markerSource;
+
+    requestAnimationFrame(() => map.updateSize());
 
     return () => {
       map.setTarget(undefined);
       mapRef.current = null;
+      baseSourceRef.current = null;
       markerSourceRef.current = null;
     };
   }, []);
 
-  // Update center + marker when props change
   useEffect(() => {
     const map = mapRef.current;
     const source = markerSourceRef.current;
@@ -158,64 +112,59 @@ markerSourceRef.current = markerSource;
     source.addFeature(marker);
   }, [lat, lng]);
 
-  // Change base map when mapType changes
-useEffect(() => {
-  const map = mapRef.current;
-  const currentBase = baseLayerRef.current;
+  useEffect(() => {
+    const baseSource = baseSourceRef.current;
+    if (!baseSource || !VWORLD_API_KEY) return;
 
-  if (!map || !currentBase) return;
+    baseSource.setUrl(getVWorldWmtsUrl(VWORLD_API_KEY, mapMode));
+    baseSource.refresh();
+  }, [mapMode]);
 
-  const newBase = createVWorldBaseLayer(mapType);
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!map || !container) return;
 
-  map.getLayers().setAt(0, newBase);
+    const observer = new ResizeObserver(() => map.updateSize());
+    observer.observe(container);
+    map.updateSize();
 
-  baseLayerRef.current = newBase;
-}, [mapType]);
+    return () => observer.disconnect();
+  }, []);
 
-useEffect(() => {
-  const cadastreLayer = cadastreLayerRef.current;
+  if (!VWORLD_API_KEY) {
+    return (
+      <div className={`flex flex-col h-full min-h-0 ${className}`.trim()}>
+        <div className="flex-1 min-h-[280px] flex items-center justify-center rounded-2xl border border-red-100 bg-red-50 text-[13px] text-red-600 px-4 text-center">
+          .env에 VITE_VWORLD_API_KEY가 없습니다. dev 서버를 재시작하세요.
+        </div>
+      </div>
+    );
+  }
 
-  if (!cadastreLayer) return;
+  return (
+    <div className={`flex flex-col h-full min-h-0 ${className}`.trim()}>
+      <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100 mb-3">
+        {(['graphic', 'satellite'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => setMapMode(mode)}
+            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+              mapMode === mode
+                ? 'bg-white shadow-soft text-gray-900'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            {mode === 'graphic' ? '일반' : '위성'}
+          </button>
+        ))}
+      </div>
 
-  cadastreLayer.setVisible(showCadastre);
-
-}, [showCadastre]);
-
-return (
-  <div>
-
-    <div
-      style={{
-        display: "flex",
-        gap: "8px",
-        marginBottom: "12px",
-      }}
-    >
-      <button
-        onClick={() => setMapType("graphic")}
-      >
-        🗺 일반
-      </button>
-
-      <button
-        onClick={() => setMapType("satellite")}
-      >
-        🛰 위성
-      </button>
-
-
-
-
+      <div
+        ref={containerRef}
+        className="flex-1 min-h-[280px] w-full rounded-2xl overflow-hidden border border-gray-100"
+      />
     </div>
-
-    <div
-      ref={containerRef}
-      style={{
-        width: "100%",
-        height: "450px",
-        borderRadius: "16px",
-      }}
-    />
-  </div>
-);
+  );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   MapPin,
   ArrowLeft,
@@ -21,6 +21,22 @@ import {
 } from '../components/ui/table';
 import VWorldMap from '../components/VWorldMap';
 import CopilotChat from '../components/CopilotChat';
+import DesignMemoChat from '../components/DesignMemoChat';
+import { findLegalBasis } from '../lib/siteAnalysis';
+import { resolveProjectAnalysisData } from '../lib/projectAnalysisData';
+import RiskScore from '../components/RiskScore';
+import { loadDesignNote, saveDesignNote } from '../storage';
+
+const SAVE_DESIGN_NOTE_URL = 'http://localhost:5678/webhook/save_design_note';
+const DESIGN_NOTE_PLACEHOLDER =
+  '설계 의도, 고민, 변경 사항 등을 자유롭게 작성하세요.';
+
+type ProjectDetailTab = 'design-memo' | 'site-analysis';
+
+const PROJECT_DETAIL_TABS: { id: ProjectDetailTab; label: string }[] = [
+  { id: 'design-memo', label: '설계 메모' },
+  { id: 'site-analysis', label: '대지분석' },
+];
 
 interface ProjectDetailPageProps {
   id: string;
@@ -28,6 +44,7 @@ interface ProjectDetailPageProps {
   address: string;
   date: string;
   data: SiteAnalysisData;
+  initialDesignNote?: string;
   onNavigate: (page: PageKey) => void;
   onDelete: (projectId: string) => Promise<boolean>;
 }
@@ -54,8 +71,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const FIELD_KEYS = Object.keys(FIELD_LABELS);
 
-const ARRAY_FIELDS = new Set([    "행위가능건축물",
-    "적용법령"]);
+const ARRAY_FIELDS = new Set(['행위가능건축물', '적용법령']);
 
 function findValue(data: SiteAnalysisData, key: string): string {
 
@@ -87,18 +103,18 @@ function buildTableRows(data: SiteAnalysisData): TableRowData[] {
   }));
 }
 
-function findLegalBasis(data: SiteAnalysisData): string | null {
-  const val = data['applied_law' as keyof SiteAnalysisData];
-  if (val === undefined) return null;
-  if (Array.isArray(val)) {
-    return val.length > 0 ? val.join(", ") : null;
+async function persistDesignNote(projectId: string, note: string): Promise<void> {
+  saveDesignNote(projectId, note);
+  try {
+    await fetch(SAVE_DESIGN_NOTE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, designNote: note }),
+    });
+  } catch {
+    // localStorage에 저장됨
   }
-  if (val === null || val === "") return null;
-  return String(val);
 }
-
-
-console.log("적용법령 =", ["적용법령"]);
 
 export default function ProjectDetailPage({
   id,
@@ -106,26 +122,66 @@ export default function ProjectDetailPage({
   address,
   date,
   data,
+  initialDesignNote,
   onNavigate,
   onDelete,
 }: ProjectDetailPageProps) {
-  const rows = buildTableRows(data);
-  console.log("SiteResultPage data =", data);
-  const legalBasis = findLegalBasis(data);
+  const analysisData = resolveProjectAnalysisData(data, address);
+  const rows = buildTableRows(analysisData);
+  console.log("ProjectDetail data (raw) =", data);
+  console.log("ProjectDetail data (normalized) =", analysisData);
+  const legalBasis = findLegalBasis(analysisData);
 
   const lat =
-    typeof data.lat === "number"
-      ? data.lat
-      : Number(data.lat) || 37.5665;
+    typeof analysisData.lat === "number"
+      ? analysisData.lat
+      : Number(analysisData.lat) || 37.5665;
 
   const lng =
-    typeof data.lng === "number"
-      ? data.lng
-      : Number(data.lng) || 126.9780;
+    typeof analysisData.lng === "number"
+      ? analysisData.lng
+      : Number(analysisData.lng) || 126.9780;
+
+  const pnuValue = analysisData.PNU ?? analysisData.pnu;
+  const pnu =
+    pnuValue !== undefined && pnuValue !== null && String(pnuValue).trim()
+      ? String(pnuValue).trim()
+      : undefined;
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [designNote, setDesignNote] = useState(
+    () => initialDesignNote?.trim() || loadDesignNote(id),
+  );
+  const [activeTab, setActiveTab] = useState<ProjectDetailTab>('design-memo');
+  const skipAutoSaveRef = useRef(true);
+
+  const projectInfo = {
+    id,
+    name,
+    address,
+    date,
+    analysisData: analysisData,
+  };
+
+  useEffect(() => {
+    skipAutoSaveRef.current = true;
+    setDesignNote(initialDesignNote?.trim() || loadDesignNote(id));
+  }, [id, initialDesignNote]);
+
+  useEffect(() => {
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void persistDesignNote(id, designNote);
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [designNote, id]);
 
 async function handleDelete() {
   setDeleting(true);
@@ -174,77 +230,115 @@ async function handleDelete() {
         </div>
       </div>
 
-      {/* Table + Map side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Analysis Table */}
-        <Card className="p-6 lg:p-8 shadow-soft-lg">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-100">
-                <TableHead className="w-[40%]">항목</TableHead>
-                <TableHead>결과</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.label} className="border-gray-50">
-                  <TableCell className="font-medium text-gray-600">
-                    {row.label}
-                  </TableCell>
-                  <TableCell className="text-gray-800">{row.value}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-
-        {/* Static Map */}
-        {address && (
-          <Card className="p-6 lg:p-8 shadow-soft-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">위치 지도</h2>
-            <VWorldMap lat={lat} lng={lng} />
-          </Card>
-        )}
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100 mb-8 max-w-xs">
+        {PROJECT_DETAIL_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
+              activeTab === tab.id
+                ? 'bg-white shadow-soft text-gray-900'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Legal Basis */}
-      {legalBasis && (
-        <Card className="p-6 lg:p-8 mb-8 shadow-soft-lg">
-          <div className="flex items-center gap-2 mb-6">
-            <Scale className="w-5 h-5 text-brand-600" />
-            <h2 className="text-xl font-bold text-gray-900">근거법령</h2>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-100">
-                <TableHead className="w-[40%]">항목</TableHead>
-                <TableHead>근거법령</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow className="border-gray-50">
-                <TableCell className="font-medium text-gray-600">
-                  적용 법령
-                </TableCell>
-                <TableCell className="text-gray-800">{legalBasis}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </Card>
+      {activeTab === 'design-memo' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
+          <Card className="p-6 lg:p-8 shadow-soft-lg flex flex-col min-h-[520px]">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">설계 메모장</h2>
+            <textarea
+              value={designNote}
+              onChange={(e) => setDesignNote(e.target.value)}
+              placeholder={DESIGN_NOTE_PLACEHOLDER}
+              className="flex-1 w-full min-h-[420px] resize-none rounded-2xl border border-gray-200 px-4 py-3.5 text-[14px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all leading-relaxed"
+            />
+          </Card>
+
+          <DesignMemoChat
+            projectId={id}
+            analysis={analysisData}
+            designNote={designNote}
+            className="h-full"
+          />
+        </div>
       )}
 
-      {/* AI Copilot Chat */}
-      <div className="mb-8">
-        <CopilotChat
-          analysis={data}
-          project={{
-            name,
-            address,
-            date,
-          }}
-        />
-      </div>
+      {activeTab === 'site-analysis' && (
+        <>
+          {/* Map + Table side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
+            {address && (
+              <Card className="p-6 lg:p-8 shadow-soft-lg flex flex-col h-full">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">위치 지도</h2>
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <VWorldMap lat={lat} lng={lng} pnu={pnu} className="flex-1" />
+                </div>
+              </Card>
+            )}
+
+            <Card className="p-6 lg:p-8 shadow-soft-lg h-full">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">대지 분석 결과</h2>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-100">
+                    <TableHead className="w-[40%]">항목</TableHead>
+                    <TableHead>결과</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={row.label} className="border-gray-50">
+                      <TableCell className="font-medium text-gray-600">
+                        {row.label}
+                      </TableCell>
+                      <TableCell className="text-gray-800">{row.value}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+
+          <div className="mb-8">
+            <RiskScore data={analysisData} />
+          </div>
+
+          {legalBasis && (
+            <Card className="p-6 lg:p-8 mb-8 shadow-soft-lg">
+              <div className="flex items-center gap-2 mb-6">
+                <Scale className="w-5 h-5 text-brand-600" />
+                <h2 className="text-xl font-bold text-gray-900">근거법령</h2>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-100">
+                    <TableHead className="w-[40%]">항목</TableHead>
+                    <TableHead>근거법령</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow className="border-gray-50">
+                    <TableCell className="font-medium text-gray-600">
+                      적용 법령
+                    </TableCell>
+                    <TableCell className="text-gray-800">{legalBasis}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+
+          <div className="mb-8">
+            <CopilotChat analysis={analysisData} project={projectInfo} />
+          </div>
+        </>
+      )}
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">

@@ -4,6 +4,7 @@ import type { PageKey, SiteAnalysisData } from '../types';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import { normalizeSiteAnalysisResponse } from '../lib/projectAnalysisData';
 
 interface SiteAnalysisPageProps {
   onNavigate: (page: PageKey) => void;
@@ -41,6 +42,8 @@ export default function SiteAnalysisPage({
       let data: SiteAnalysisData | null = null;
       try {
         data = (await response.json()) as SiteAnalysisData;
+        console.log('response', response);
+        console.log('data (raw)', data);
       } catch {
         // response body is not JSON
       }
@@ -59,7 +62,10 @@ export default function SiteAnalysisPage({
         throw new Error('응답을 받지 못했습니다');
       }
 
-      onAnalysisComplete(selectedAddress, data, projectName.trim());
+      const normalized = normalizeSiteAnalysisResponse(data, selectedAddress);
+      console.log('data (normalized)', normalized);
+
+      onAnalysisComplete(selectedAddress, normalized, projectName.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다');
     } finally {

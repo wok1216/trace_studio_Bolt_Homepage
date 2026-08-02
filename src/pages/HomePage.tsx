@@ -15,6 +15,12 @@ import Card from '../components/Card';
 import ProjectCard from '../components/ProjectCard';
 import Button from '../components/Button';
 import AnalysisLoading from '../components/AnalysisLoading';
+import {
+  fetchCultureList,
+  openCultureLink,
+  type CultureItem,
+} from '../lib/cultureFeed';
+import { normalizeSiteAnalysisResponse } from '../lib/projectAnalysisData';
 
 interface HomePageProps {
   onNavigate: (page: PageKey) => void;
@@ -29,7 +35,23 @@ const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY || '';
 
 const WEBHOOK_URL = 'http://localhost:5678/webhook/trace_studio';
 const JOB_LIST_URL = 'http://localhost:5678/webhook/job_list';
+const CONTEST_URL = 'http://localhost:5678/webhook/contest_list';
 const EVENT_URL = 'http://localhost:5678/webhook/event_list';
+const EDUCATION_URL = 'http://localhost:5678/webhook/education_list';
+
+type CultureTab = 'contest' | 'event' | 'education';
+
+const CULTURE_MORE_LINKS: Record<CultureTab, string> = {
+  contest: 'https://www.wevity.com/?c=find&s=1&gub=1&cidx=24',
+  event: 'https://www.thinkcontest.com/thinkgood/user/searchResultPer.do?querystr=-MsmFVj1iwwklvs7tTEj79u0wo556YDshlMLGU-GqnoBpmouGqKYYrnt32K7FlMs',
+  education: 'https://www.thinkcontest.com/thinkgood/user/searchResult.do?querystr=iJq9beEe4lYEfq4gNVCNkvnEPQVpHZk8mzYVdX11RXitwxyKeEegrx0G13LZe-Ae',
+};
+
+const CULTURE_MORE_LABELS: Record<CultureTab, string> = {
+  contest: '공모전 더보기',
+  event: '대외활동 더보기',
+  education: '교육 더보기',
+};
 
 interface AddressSuggestion {
   id: string;
@@ -38,6 +60,17 @@ interface AddressSuggestion {
   roadAddress: string;
   jibunAddress: string;
 }
+
+const CULTURE_LIST_LIMIT = 3;
+const HOME_PAGE_CACHE_VERSION = 3;
+
+let homePageDataCache: {
+  version: number;
+  contest: CultureItem[];
+  event: CultureItem[];
+  education: CultureItem[];
+  jobs: Array<{ company: string; career: string; dday: string; link: string }>;
+} | null = null;
 
 export default function HomePage({ onNavigate, projects, onProjectClick, onAnalysisComplete }: HomePageProps) {
   // ── new-project card state ──
@@ -52,10 +85,10 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
   const [jobList, setJobList] = useState<any[]>([]);
   const [jobLoading, setJobLoading] = useState(false);
   const [hasArchitecture, setHasArchitecture] = useState(true);
-  const [contestList, setContestList] = useState<any[]>([]);
-  const [educationList, setEducationList] = useState<any[]>([]);
-  const [eventList, setEventList] = useState<any[]>([]);
-  const [cultureTab, setCultureTab] = useState('contest');
+  const [contestList, setContestList] = useState<CultureItem[]>([]);
+  const [educationList, setEducationList] = useState<CultureItem[]>([]);
+  const [eventList, setEventList] = useState<CultureItem[]>([]);
+  const [cultureTab, setCultureTab] = useState<CultureTab>('contest');
 
   // ── chat state ──
   const [chatInput, setChatInput] = useState('');
@@ -141,77 +174,47 @@ export default function HomePage({ onNavigate, projects, onProjectClick, onAnaly
    }, []);
 
    useEffect(() => {
-      console.log("Home useEffect");
-      console.log("loadJobs 실행");
-      console.log("loadEvents 실행");
-      console.log(EVENT_URL);
-
-    const loadEvents = async () => {
-      console.log("loadEvents 함수 진입");
-      
-      try {
-        const response = await fetch(EVENT_URL,{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json"
-          }
-        });
-
-const data = await response.json();
-
-console.log(data);
-
-const result = Array.isArray(data)
-  ? data[0]
-  : data;
-
-setContestList(result?.contests ?? []);
-setEventList(result?.events ?? []);
-setEducationList(result?.education ?? []);
-
-  } catch(err){
-    console.error(err);
-  }
-
-};
-
-  const loadJobs = async () => {
-    try {
-      setJobLoading(true);
-
-      const response = await fetch(JOB_LIST_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const jobs = await response.json();
-      
-      console.log("response.ok =", response.ok);
-      console.log("job api =", jobs);
-      
-const list = Array.isArray(jobs)
-  ? jobs
-  : [];
-      
-      setJobList(list);
-      
-      console.log("jobList length =", list.length);
-      
-      setJobList(list);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setJobLoading(false);
+    if (homePageDataCache?.version === HOME_PAGE_CACHE_VERSION) {
+      setContestList(homePageDataCache.contest);
+      setEventList(homePageDataCache.event);
+      setEducationList(homePageDataCache.education);
+      setJobList(homePageDataCache.jobs);
+      return;
     }
-  };
 
-  loadJobs();
-  console.log("loadEvents 호출");
-  loadEvents();
+    const loadHomePageData = async () => {
+      try {
+        setJobLoading(true);
+        const [contest, event, education, jobsResponse] = await Promise.all([
+          fetchCultureList(CONTEST_URL, CULTURE_LIST_LIMIT),
+          fetchCultureList(EVENT_URL, CULTURE_LIST_LIMIT),
+          fetchCultureList(EDUCATION_URL, CULTURE_LIST_LIMIT),
+          fetch(JOB_LIST_URL),
+        ]);
 
-}, []);
+        const jobs = jobsResponse.ok ? await jobsResponse.json() : [];
+        const jobList = Array.isArray(jobs) ? jobs : [];
+
+        homePageDataCache = {
+          version: HOME_PAGE_CACHE_VERSION,
+          contest,
+          event,
+          education,
+          jobs: jobList,
+        };
+        setContestList(contest);
+        setEventList(event);
+        setEducationList(education);
+        setJobList(jobList);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setJobLoading(false);
+      }
+    };
+
+    loadHomePageData();
+  }, []);
 
   const handleStartAnalysis = async () => {
 
@@ -229,8 +232,9 @@ const list = Array.isArray(jobs)
       try {
         data = (await response.json()) as SiteAnalysisData;
 
-        console.log("Is Array:", Array.isArray(data));
-        console.log(data);
+        console.log('response', response);
+        console.log('data (raw)', data);
+        console.log('Is Array:', Array.isArray(data));
         console.log(JSON.stringify(data, null, 2));
 
       } catch {
@@ -251,13 +255,12 @@ const list = Array.isArray(jobs)
         throw new Error('응답을 받지 못했습니다');
       }
 
-      const result = Array.isArray(data) ? data[0] : data;
-      
-      console.log("Result:", result);
-      
+      const normalized = normalizeSiteAnalysisResponse(data, selectedAddress!);
+      console.log('data (normalized)', normalized);
+
       onAnalysisComplete(
         selectedAddress!,
-        data
+        normalized,
       );
 
     } catch (err) {
@@ -286,7 +289,7 @@ if (analysisLoading) {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Card A: 대지분석 */}
-        <Card className="p-6 lg:col-span-1 flex flex-col gap-4">
+        <Card className="p-6 lg:col-span-1 flex flex-col gap-4 h-full">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center ">
               <MapPin className="w-4 h-4 text-green-600" />
@@ -294,7 +297,7 @@ if (analysisLoading) {
             
             <div>
               <h3 className="text-[16px] font-bold text-gray-900">
-                대지분석 시작하기
+                대지분석
               </h3>
 
     <p className="text-[11px] text-gray-400">
@@ -305,51 +308,55 @@ if (analysisLoading) {
 
 
           {/* Address search */}
-          <div ref={containerRef} className="relative">
-            <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">주소 검색</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-              <input
-                required
-                type="text"
-                value={query}
-                onChange={e => handleQueryChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
-                placeholder="주소를 입력하세요 (예: 강남구 테헤란로 123)"
-                className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
-              />
-              {searchLoading && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-500 animate-spin" />
+          <div className="flex-1 flex flex-col items-center justify-center w-full py-2">
+            <div ref={containerRef} className="relative w-full">
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
+                주소 검색
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                <input
+                  required
+                  type="text"
+                  value={query}
+                  onChange={e => handleQueryChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
+                  placeholder="주소를 입력하세요 (예: 강남구 테헤란로 123)"
+                  className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 transition-all"
+                />
+                {searchLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-500 animate-spin" />
+                )}
+              </div>
+
+              {/* Dropdown */}
+              {showDropdown && suggestions.length > 0 && (
+                <div className="absolute z-50 mt-1.5 w-full bg-white rounded-2xl border border-gray-100 shadow-soft-lg overflow-hidden animate-fade-in-down max-h-60 overflow-y-auto">
+                  {suggestions.map((s, i) => {
+                    const Icon = s.type === 'road' ? Building : Home;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => handleSelect(s)}
+                        onMouseEnter={() => setActiveIndex(i)}
+                        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors ${i === activeIndex ? 'bg-brand-50' : 'hover:bg-gray-50'} ${i > 0 ? 'border-t border-gray-50' : ''}`}
+                      >
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center ${s.type === 'road' ? 'bg-blue-50' : 'bg-amber-50'}`}>
+                          <Icon className={`w-3 h-3 ${s.type === 'road' ? 'text-blue-500' : 'text-amber-600'}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-medium text-gray-900 truncate">{s.label}</p>
+                          <p className="text-[11px] text-gray-400 truncate">
+                            {s.type === 'road' ? `지번: ${s.jibunAddress}` : `도로명: ${s.roadAddress}`}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
-
-            {/* Dropdown */}
-            {showDropdown && suggestions.length > 0 && (
-              <div className="absolute z-50 mt-1.5 w-full bg-white rounded-2xl border border-gray-100 shadow-soft-lg overflow-hidden animate-fade-in-down max-h-60 overflow-y-auto">
-                {suggestions.map((s, i) => {
-                  const Icon = s.type === 'road' ? Building : Home;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => handleSelect(s)}
-                      onMouseEnter={() => setActiveIndex(i)}
-                      className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors ${i === activeIndex ? 'bg-brand-50' : 'hover:bg-gray-50'} ${i > 0 ? 'border-t border-gray-50' : ''}`}
-                    >
-                      <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center ${s.type === 'road' ? 'bg-blue-50' : 'bg-amber-50'}`}>
-                        <Icon className={`w-3 h-3 ${s.type === 'road' ? 'text-blue-500' : 'text-amber-600'}`} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-medium text-gray-900 truncate">{s.label}</p>
-                        <p className="text-[11px] text-gray-400 truncate">
-                          {s.type === 'road' ? `지번: ${s.jibunAddress}` : `도로명: ${s.roadAddress}`}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {/* Error */}
@@ -375,18 +382,19 @@ if (analysisLoading) {
         </Card>
 
         {/* Card B: 오늘의 정보 */}
-        <Card className="p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center">
-              <Lightbulb className="w-4 h-4 text-yellow-500" />
+        <Card className="p-6 flex flex-col gap-3 h-full">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center">
+                <Lightbulb className="w-4 h-4 text-yellow-500" />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-gray-900">오늘의 정보</h3>
+                <p className="text-[11px] text-gray-400">공모전·대외활동·교육 정보를 확인하세요.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-[16px] font-bold text-gray-900">오늘의 정보</h3>
-              <p className="text-[11px] text-gray-400">공모전·대외활동·교육 정보를 확인하세요.</p>
-            </div>
-          </div>
-          
-          <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100">
+
+            <div className="flex gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100">
 
 <button
   onClick={() => setCultureTab("contest")}
@@ -421,47 +429,88 @@ if (analysisLoading) {
   교육
 </button>
 
-</div>
+            </div>
+          </div>
 
-<div className="flex flex-col gap-1 mt-3">
+<div className="flex flex-col gap-1.5 flex-1 mt-1">
   {(() => {
     const cultureList =
-      cultureTab === "contest"
+      cultureTab === 'contest'
         ? contestList
-        : cultureTab === "event"
-        ? eventList
-        : educationList;
+        : cultureTab === 'event'
+          ? eventList
+          : educationList;
 
-    return cultureList.map((item: any, i: number) => (
-      <button
-        key={i}
-        onClick={() => window.open(item.url, "_blank")}
-        className="flex items-center gap-1 p-2 rounded-xl hover:bg-gray-50 transition-colors text-left w-full"
-      >
-<div className="flex justify-between items-start">
-  <div className="flex-1 min-w-0">
-    <p className="text-[13px] font-semibold text-gray-800 line-clamp-2">
-      {item.title}
-    </p>
+    if (cultureList.length === 0) {
+      return (
+        <p className="text-[12px] text-gray-400 text-center py-4">
+          표시할 정보가 없습니다
+        </p>
+      );
+    }
 
-    <p className="text-[11px] text-gray-400 mt-1">
-      {item.period}
-    </p>
-  </div>
+    return cultureList.slice(0, CULTURE_LIST_LIMIT).map((item, i) => {
+      const hasLink = Boolean(item.url?.trim());
 
-  <span className="text-[11px] text-gray-400 whitespace-nowrap self-start ml-2">
-    {item.region}
-  </span>
-</div>
-      </button>
-    ));
+      if (hasLink) {
+        return (
+          <a
+            key={i}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors text-left w-full cursor-pointer no-underline"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-gray-800 line-clamp-2">
+                {item.title}
+              </p>
+              {item.period && (
+                <p className="text-[11px] text-gray-400 mt-1">
+                  {item.period}
+                </p>
+              )}
+            </div>
+          </a>
+        );
+      }
+
+      return (
+        <button
+          key={i}
+          type="button"
+          onClick={() => openCultureLink(item.url, item)}
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors text-left w-full"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-gray-800 line-clamp-2">
+              {item.title}
+            </p>
+            {item.period && (
+              <p className="text-[11px] text-gray-400 mt-1">
+                {item.period}
+              </p>
+            )}
+          </div>
+        </button>
+      );
+    });
   })()}
+
+  <button
+    type="button"
+    onClick={() => openCultureLink(CULTURE_MORE_LINKS[cultureTab])}
+    className="mt-auto ml-auto pr-1 pt-1 text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
+  >
+    {CULTURE_MORE_LABELS[cultureTab]}
+    <ArrowRight className="w-3 h-3" />
+  </button>
 </div>
 
         </Card>
 
         {/* Card C: 오늘의 채용공고 */}
-        <Card className="p-6 flex flex-col gap-4">
+        <Card className="p-6 flex flex-col gap-4 h-full">
           <div className="flex items-center gap-2 -mb-2">
             <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
               <Briefcase className="w-4 h-4 text-blue-600" />
@@ -473,7 +522,7 @@ if (analysisLoading) {
           </div>
 
           {/* List */}
-          <div className="flex flex-col gap-1 flex mt-3">
+          <div className="flex flex-col gap-1 flex-1 mt-3">
             {!hasArchitecture && (
                   <div className="mb-1 rounded-lg bg-gray-50 border border-gray-100 px-3 py-1.5 flex flex-col items-center justify-center text-center">
                    <p className="text-[11px] font-medium text-gray-500">
@@ -508,7 +557,7 @@ if (analysisLoading) {
 
 <button
   onClick={() => window.open("https://vmspace.com/job/job.html", "_blank")}
-  className="mt-1 ml-auto pr-3 text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
+  className="mt-auto ml-auto pr-3 pt-1 text-[12px] text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
 >
   건축 채용공고 더보기
   <ArrowRight className="w-3 h-3" />

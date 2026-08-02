@@ -22,6 +22,7 @@ export interface Project {
   date: string;
   thumbnail?: string;
   analysisData?: SiteAnalysisData;
+  designNote?: string;
 }
 
 export interface SiteAnalysisData {
